@@ -1,11 +1,9 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedNotifications } from '../data/mockData';
 import { uid } from '../lib/id';
 import { remote, api } from '../services/api/client';
 
 export const useNotificationStore = createStore('notifications', (set) => ({
-  items: DEMO_MODE ? seedNotifications() : [],
+  items: [],
   hydrate: (items) => set({ items }),
   push(n) {
     const item = { id: uid('n'), read: false, at: new Date().toISOString(), ...n };

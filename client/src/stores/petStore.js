@@ -1,6 +1,4 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedPet } from '../data/mockData';
 import { PET_FOODS } from '../catalog/pets';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -18,7 +16,7 @@ function sync(pet, write) {
 }
 
 export const usePetStore = createStore('pet', (set, get) => ({
-  pet: DEMO_MODE ? seedPet() : { adopted: false, log: [] },
+  pet: { adopted: false, log: [] },
   hydrate: (pet) => set({ pet }),
 
   /** Gently decay stats based on elapsed time (≈3 hunger / hour). */

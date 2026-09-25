@@ -7,7 +7,11 @@ import { DEMO_MODE } from '../config/env';
  * survives refreshes. With a real backend, private data is NOT cached in the
  * browser (it's hydrated from the API after login) — only UI preferences are.
  */
-export function createStore(name, initializer, { alwaysPersist = false, version = 1, partialize, migrate } = {}) {
+// v2 removed the pre-filled sample world; older saved demo data is dropped so
+// everyone starts with an empty world of their own.
+const STORAGE_VERSION = 2;
+
+export function createStore(name, initializer, { alwaysPersist = false, version = STORAGE_VERSION, partialize, migrate } = {}) {
   if (!DEMO_MODE && !alwaysPersist) return create(initializer);
   return create(
     persist(initializer, {
@@ -15,7 +19,7 @@ export function createStore(name, initializer, { alwaysPersist = false, version 
       version,
       storage: createJSONStorage(() => localStorage),
       ...(partialize ? { partialize } : {}),
-      migrate: migrate ?? ((state) => state),
+      migrate: migrate ?? ((state, from) => (from < STORAGE_VERSION ? {} : state)),
     }),
   );
 }

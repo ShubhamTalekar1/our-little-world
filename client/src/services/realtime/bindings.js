@@ -33,11 +33,11 @@ const notify = (prefKey, n, sound = 'notification') => {
 };
 
 const INVITE_COPY = {
-  movie: (w) => ({ title: `${w.Subject} wants to watch a movie with you 🎬`, link: '/together/movie' }),
-  dance: (w) => ({ title: `${w.Subject} wants to slow dance with you 💃`, link: '/together/dance' }),
+  movie: (w) => ({ title: `${w.Subject} ${w.v('wants', 'want')} to watch a movie with you 🎬`, link: '/together/movie' }),
+  dance: (w) => ({ title: `${w.Subject} ${w.v('wants', 'want')} to slow dance with you 💃`, link: '/together/dance' }),
   date: (w) => ({ title: `${w.Subject} planned a date for you 🌃`, link: '/date-night' }),
-  call: (w) => ({ title: `${w.Subject} wants you to come sit with ${w.them} ❤️`, link: '/together/call' }),
-  music: (w) => ({ title: `${w.Subject} wants to listen together 🎶`, link: '/together/music' }),
+  call: (w) => ({ title: `${w.Subject} ${w.v('wants', 'want')} you to come sit with ${w.them} ❤️`, link: '/together/call' }),
+  music: (w) => ({ title: `${w.Subject} ${w.v('wants', 'want')} to listen together 🎶`, link: '/together/music' }),
 };
 
 /** Wire incoming realtime events (from the other person) into the stores. */
@@ -50,7 +50,7 @@ export function bindRealtime() {
     usePresenceStore.getState().setPartner({ status: 'online', activity: activity ?? { type: 'room' } });
     if (prev.status === 'offline') {
       const w = partnerWords();
-      useUiStore.getState().toast(`${w.Subject} ${w.plural ? 'are' : 'is'} here`, { emoji: '🤍' });
+      useUiStore.getState().toast(`${w.Subject} ${w.is} here`, { emoji: '🤍' });
       // Only leave a notification after a real absence, not every reconnect.
       const away = Date.now() - new Date(prev.lastSeen ?? 0).getTime();
       if (away > 30 * 60_000) notify('presence', { type: 'presence', title: `${w.Subject} came online`, body: 'Say hi 👋', link: '/' }, null);

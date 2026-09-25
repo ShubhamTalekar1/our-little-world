@@ -1,6 +1,5 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedMessages, ME_ID } from '../data/mockData';
+import { ME_ID } from '../data/demoWorld';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -13,7 +12,7 @@ import { remote, api } from '../services/api/client';
 export const useChatStore = createStore(
   'chat',
   (set, get) => ({
-    messages: DEMO_MODE ? seedMessages() : [],
+    messages: [],
     partnerTyping: false,
     hydrate: (messages) => set({ messages }),
 

@@ -1,6 +1,6 @@
 import { createStore } from './createStore';
 import { DEMO_MODE } from '../config/env';
-import { seedAvatars, ME_ID } from '../data/mockData';
+import { initialAvatars, ME_ID } from '../data/demoWorld';
 import { OUTFIT_SLOTS } from '../catalog/avatarItems';
 import { realtime } from '../services/realtime';
 import { EV } from '../services/realtime/events';
@@ -17,7 +17,7 @@ function broadcast(config) {
 
 export const useAvatarStore = createStore('avatars', (set, get) => ({
   myId: ME_ID,
-  avatars: DEMO_MODE ? seedAvatars() : {},
+  avatars: DEMO_MODE ? initialAvatars() : {},
   hydrate: (myId, avatars) => set({ myId, avatars }),
   setAvatar: (userId, config) => set((s) => ({ avatars: { ...s.avatars, [userId]: config } })),
 

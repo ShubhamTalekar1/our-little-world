@@ -1,7 +1,5 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedMusic } from '../data/mockData';
-import { SONGS } from '../catalog/songs';
+import { SONGS, DEFAULT_PLAYLISTS } from '../catalog/songs';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -18,7 +16,9 @@ const songById = (id) => SONGS.find((s) => s.id === id);
 export const useMusicStore = createStore(
   'music',
   (set, get) => ({
-    ...(DEMO_MODE ? seedMusic() : { playlists: [], favorites: [], queue: SONGS.map((s) => s.id) }),
+    playlists: DEFAULT_PLAYLISTS.map((p) => ({ ...p, songIds: [] })),
+    favorites: [],
+    queue: SONGS.map((s) => s.id),
     currentId: 's1',
     playing: false,
     startedAt: 0,

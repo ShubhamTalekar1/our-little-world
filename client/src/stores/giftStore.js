@@ -1,7 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedGifts } from '../data/mockData';
 import { GIFTS_BY_ID, MYSTERY_POOL } from '../catalog/gifts';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
@@ -10,7 +8,8 @@ import { EV } from '../services/realtime/events';
 import { remote, api } from '../services/api/client';
 
 export const useGiftStore = createStore('gifts', (set, get) => ({
-  ...(DEMO_MODE ? seedGifts() : { received: [], sent: [] }),
+  received: [],
+  sent: [],
   hydrate: (g) => set(g),
 
   /** Returns { ok, gift } or { ok: false, reason } */

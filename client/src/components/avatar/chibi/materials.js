@@ -23,6 +23,13 @@ export function toon(color, side = THREE.FrontSide) {
   return cache.get(key);
 }
 
+/** Hair uses per-vertex colours (a baked root-to-crown gradient). */
+export function hairVertexMaterial() {
+  const key = 'hair-vertex';
+  if (!cache.has(key)) cache.set(key, new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, emissive: '#ffffff', emissiveIntensity: 0.0, roughness: 0.5, metalness: 0 }));
+  return cache.get(key);
+}
+
 export function flat(color, opacity = 1) {
   const key = `flat:${color}:${opacity}`;
   if (!cache.has(key)) {

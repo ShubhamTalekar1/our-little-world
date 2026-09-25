@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CLOTHING_BY_ID, HEIGHTS } from '../../../catalog/avatarItems';
 import { shade } from '../../../lib/color';
-import { toon, flat, shiny } from './materials';
+import { toon, flat, shiny, hairVertexMaterial } from './materials';
 
 /**
  * Builds a chibi character from an avatar config as a plain Three.js group.
@@ -388,115 +388,167 @@ export function buildChibi(config) {
   if (f.extra === 'mole') face.add(mesh(sphere(0.009, 8, 6), flat(shade(skin, -0.5)), onFace(0.1, -0.24, 0.004)));
 
   // ---- hair ---------------------------------------------------------------
-  // Soft, rounded shapes only: a smooth "helmet", a scalloped fringe of
-  // overlapping lobes, and style-specific volume. No outlines, no spikes.
+  // Anime-style chibi hair: a smooth cap plus pointed "petal" locks that hang
+  // around the head, and a baked colour gradient (darker at the roots and
+  // underside, lighter on the crown) so it has depth without outlines.
   const hair = new THREE.Group();
   face.add(hair);
   const style = config.hair?.style ?? 'bob';
-  const light = toon(shade(hairColor, 0.25));
-  const capR = style === 'buzz' ? 0.51 : 0.545;
-  const cap = mesh(sphere(capR, 40, 28, 0, Math.PI * 2, 0, Math.PI * (style === 'buzz' ? 0.44 : 0.58)), hairM);
-  cap.rotation.x = -0.36;
-  hair.add(cap);
-  // keep the back of the head covered down to the nape
-  hair.add(mesh(sphere(capR - 0.005, 36, 24, Math.PI / 2 + 1.2, Math.PI * 2 - 2.4, Math.PI * 0.3, Math.PI * 0.4), hairM));
-
-  /** A soft lock of hair lying on the head surface at (x, y). */
-  const lobe = (x, y, r, stretch = [1.25, 0.9, 0.5], tilt = 0, mat = hairM) => {
-    const m = mesh(sphere(r, 24, 18), mat, onFace(x, y, 0.012), stretch);
-    const [rx, ry] = faceRot(x, y);
-    m.rotation.set(rx, ry, tilt);
-    hair.add(m);
+  const hairMeshes = [];
+  const H = (m) => {
+    hairMeshes.push(m);
     return m;
   };
-  /** Scalloped fringe across the forehead. */
-  const fringe = (n, { y = 0.25, width = 0.56, r = 0.14, dip = 0.03, shift = 0 } = {}) => {
+  const capR = style === 'buzz' ? 0.51 : 0.545;
+  const cap = H(mesh(sphere(capR, 44, 30, 0, Math.PI * 2, 0, Math.PI * (style === 'buzz' ? 0.44 : 0.56)), hairM));
+  cap.rotation.x = style === 'buzz' || style === 'curly' ? -0.36 : -0.66; // raise the hairline so the fringe forms it
+  hair.add(cap);
+  hair.add(H(mesh(sphere(capR - 0.005, 40, 26, Math.PI / 2 + 1.2, Math.PI * 2 - 2.4, Math.PI * 0.3, Math.PI * 0.4), hairM)));
+
+  // Teardrop lock: rounded top, soft pointed tip. Unit size, anchored near the top.
+  const dropProfile = [
+    [0.0, 0.42], [0.22, 0.4], [0.42, 0.3], [0.5, 0.12], [0.46, -0.08], [0.34, -0.3], [0.18, -0.5], [0.05, -0.64], [0.0, -0.68],
+  ]
+    .reverse() // bottom → top so the faces point outwards
+    .map(([x, y]) => new THREE.Vector2(x, y));
+  const drop = () => G(new THREE.LatheGeometry(dropProfile, 18));
+
+  /**
+   * A lock on the head at azimuth `az` (0 = front, + = character's left… i.e. screen-right),
+   * starting at height `y`, hanging down `len`, `wid` wide. `curl` bends the tip.
+   */
+  const petal = (az, y, len, wid, { twist = 0, lift = 0.0, lean = 0.28, flat = 0.5 } = {}) => {
+    const g = new THREE.Group();
+    g.rotation.y = az;
+    const rr = capR + wid * flat * 0.3; // sits on top of the cap, not inside it
+    const z = Math.sqrt(Math.max(0.0001, rr * rr - y * y)) + lift;
+    const m = H(mesh(drop(), hairM, [0, y - len * 0.38, z], [wid, len, wid * flat]));
+    // hang down, curving gently outwards so the tip clears the face
+    m.rotation.set(-lean, 0, twist);
+    g.add(m);
+    hair.add(g);
+    return m;
+  };
+  const ring = (n, from, to, y, len, wid, opts = {}) => {
     for (let i = 0; i < n; i++) {
-      const t = n === 1 ? 0 : i / (n - 1) - 0.5;
-      const x = t * width + shift;
-      lobe(x, y - (0.5 - Math.abs(t)) * dip * 2 + Math.abs(t) * 0.02, r * (1 - Math.abs(t) * 0.25), [1.25, 0.95, 0.5], -t * 0.9);
+      const t = n === 1 ? 0.5 : i / (n - 1);
+      const az = from + (to - from) * t;
+      petal(az, y, len * (opts.vary ? 0.85 + ((i * 37) % 10) / 33 : 1), wid, { ...opts, twist: (opts.fan ?? 0) * (t - 0.5) });
     }
   };
-  /** Locks framing the face in front of the ears. */
-  const sideLocks = (len = 0.12, r = 0.07) => {
-    for (const side of [-1, 1]) hair.add(mesh(capsule(r, len), hairM, [side * 0.44, 0.02 - len / 2, 0.16], [1, 1, 0.75], [0.1, 0, side * 0.12]));
+  /** Fringe across the forehead. `shift` sweeps it to one side. */
+  const fringe = (n, { len = 0.3, wid = 0.15, y = 0.3, spread = 1.05, shift = 0, fan = -0.7, vary = true } = {}) =>
+    ring(n, -spread / 2 + shift, spread / 2 + shift, y + 0.06, len * 1.2, wid * 1.7, { fan, vary, lean: 0.34, flat: 0.5 });
+  const sides = (len, { n = 2, y = 0.26, wid = 0.24 } = {}) => {
+    ring(n, 1.05, 1.65, y, len, wid, { fan: 0.3, lean: 0.1 });
+    ring(n, -1.05, -1.65, y, len, wid, { fan: -0.3, lean: 0.1 });
   };
-  const strands = (len, wavy = false) => {
-    for (const side of [-1, 1]) {
-      const x = side * 0.43;
-      hair.add(mesh(capsule(0.1, len), hairM, [x, -0.1 - len / 2, 0.06], [1, 1, 0.78], [0, 0, side * 0.05]));
-      if (wavy) for (let i = 0; i < 3; i++) hair.add(mesh(sphere(0.105, 22, 16), hairM, [x + side * (i % 2 ? 0.045 : -0.01), -0.16 - i * 0.17, 0.07], [1, 1.1, 0.8]));
-    }
-  };
-  const backPanel = (len, width = 0.36) => hair.add(mesh(capsule(width, len), hairM, [0, -0.12 - len / 2, -0.2], [1.12, 1, 0.55]));
+  const back = (len, { n = 5, y = 0.2, wid = 0.22 } = {}) => ring(n, Math.PI - 1.1, Math.PI + 1.1, y, len, wid, { lean: 0.12, vary: true });
+  const longBack = (len, width = 0.38) => hair.add(H(mesh(capsule(width, len), hairM, [0, -0.12 - len / 2, -0.2], [1.12, 1, 0.55])));
 
   switch (style) {
     case 'short':
-      fringe(5, { y: 0.23, width: 0.58, r: 0.13, dip: 0.02 });
-      sideLocks(0.08, 0.06);
+      fringe(6, { len: 0.26, wid: 0.13 });
+      sides(0.3, { n: 2 });
+      back(0.3);
       break;
     case 'sidepart':
-      fringe(3, { y: 0.25, width: 0.34, r: 0.12, shift: 0.1 });
-      lobe(-0.14, 0.3, 0.19, [1.7, 0.85, 0.55], 0.35);
-      sideLocks(0.08, 0.06);
+      fringe(5, { len: 0.28, wid: 0.15, shift: 0.18, fan: -1.1 });
+      petal(-0.45, 0.38, 0.4, 0.3, { twist: 0.9, lean: 0.35 });
+      sides(0.3, { n: 2 });
+      back(0.32);
       break;
     case 'messy':
-      fringe(5, { y: 0.25, width: 0.56, r: 0.13, dip: 0.05 });
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2;
-        const tuft = mesh(sphere(0.1, 18, 14), hairM, [Math.cos(a) * 0.28, 0.44, Math.sin(a) * 0.28 - 0.06], [0.8, 1.5, 0.8], [Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7]);
+      fringe(7, { len: 0.28, wid: 0.13, fan: -1.4 });
+      sides(0.3, { n: 2 });
+      back(0.32, { n: 6 });
+      // tufts sticking up on the crown
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + 0.3;
+        const tuft = H(mesh(drop(), hairM, [Math.sin(a) * 0.2, 0.52, Math.cos(a) * 0.2 - 0.05], [0.13, 0.3, 0.07], [Math.PI + Math.cos(a) * 0.6, 0, -Math.sin(a) * 0.6]));
         hair.add(tuft);
       }
-      sideLocks(0.08, 0.06);
       break;
     case 'buzz':
       break;
     case 'curly':
-      for (let i = 0; i < 60; i++) {
-        const phi = Math.acos(1 - (i / 60) * 1.3);
+      for (let i = 0; i < 64; i++) {
+        const phi = Math.acos(1 - (i / 64) * 1.3);
         const th = i * 2.399;
-        const p = new THREE.Vector3(Math.sin(phi) * Math.cos(th), Math.cos(phi), Math.sin(phi) * Math.sin(th)).multiplyScalar(0.54);
+        const p = new THREE.Vector3(Math.sin(phi) * Math.cos(th), Math.cos(phi), Math.sin(phi) * Math.sin(th)).multiplyScalar(0.55);
         if (p.z > 0.2 && p.y < 0.24) continue; // keep the face clear
-        hair.add(mesh(sphere(0.12, 18, 14), i % 6 ? hairM : light, p.toArray()));
+        hair.add(H(mesh(sphere(0.12, 18, 14), hairM, p.toArray())));
       }
       break;
     case 'bob':
-      fringe(5, { y: 0.22, width: 0.6, r: 0.13, dip: 0.01 });
-      hair.add(mesh(sphere(0.575, 40, 24, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, Math.PI * 0.22, Math.PI * 0.5), hairM, [0, -0.02, -0.02], [1, 1, 1]));
+      fringe(7, { len: 0.3, wid: 0.14, fan: -0.4, vary: false });
+      sides(0.55, { n: 3, wid: 0.26 });
+      back(0.5, { n: 6, wid: 0.24 });
       break;
     case 'long':
-      fringe(4, { y: 0.25, width: 0.5, r: 0.13 });
-      strands(0.36);
-      backPanel(0.55);
+      fringe(6, { len: 0.3, wid: 0.14 });
+      sides(0.62, { n: 2, wid: 0.24 });
+      back(0.55, { n: 6, wid: 0.25 });
+      longBack(0.6);
       break;
-    case 'wavy':
-      // centre parting: two soft sweeps
-      lobe(-0.15, 0.26, 0.18, [1.5, 0.9, 0.5], 0.5);
-      lobe(0.15, 0.26, 0.18, [1.5, 0.9, 0.5], -0.5);
-      strands(0.4, true);
-      backPanel(0.6, 0.38);
+    case 'wavy': {
+      // centre parting: two sweeps curving away from the middle
+      petal(-0.3, 0.38, 0.44, 0.34, { twist: 0.7, lean: 0.35 });
+      petal(0.3, 0.38, 0.44, 0.34, { twist: -0.7, lean: 0.35 });
+      sides(0.62, { n: 2, wid: 0.24 });
+      back(0.6, { n: 6, wid: 0.26 });
+      longBack(0.65, 0.4);
+      // soft waves at the ends
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) hair.add(H(mesh(sphere(0.1, 20, 14), hairM, [side * (0.43 + (i % 2 ? 0.04 : -0.01)), -0.42 - i * 0.16, 0.02], [1, 1.1, 0.8])));
       break;
+    }
     case 'ponytail': {
-      fringe(4, { y: 0.25, width: 0.5, r: 0.13 });
-      sideLocks(0.14, 0.065);
+      fringe(6, { len: 0.28, wid: 0.14 });
+      sides(0.36, { n: 2 });
       const tail = new THREE.Group();
-      tail.position.set(0, 0.22, -0.46);
+      tail.position.set(0, 0.24, -0.46);
       tail.add(mesh(torus(0.06, 0.028), toon('#E8B4A0'), [0, 0, 0], null, [0.4, 0, 0]));
-      tail.add(mesh(capsule(0.11, 0.36), hairM, [0, -0.24, -0.1], null, [0.35, 0, 0]));
-      tail.add(mesh(sphere(0.12, 20, 16), hairM, [0, -0.44, -0.17], [1, 1.2, 1]));
+      tail.add(H(mesh(drop(), hairM, [0, -0.2, -0.08], [0.3, 0.75, 0.24], [0.3, 0, 0])));
       hair.add(tail);
       break;
     }
     case 'buns':
-      fringe(5, { y: 0.22, width: 0.58, r: 0.13, dip: 0.01 });
-      sideLocks(0.14, 0.065);
-      for (const side of [-1, 1]) hair.add(mesh(sphere(0.17, 24, 18), hairM, [side * 0.3, 0.42, -0.08]));
+      fringe(7, { len: 0.28, wid: 0.14, fan: -0.4, vary: false });
+      sides(0.4, { n: 2 });
+      for (const side of [-1, 1]) hair.add(H(mesh(sphere(0.17, 24, 18), hairM, [side * 0.3, 0.42, -0.08])));
       break;
     default:
-      fringe(4);
+      fringe(6);
   }
-  // soft anime sheen on the crown
-  if (style !== 'buzz' && style !== 'curly') hair.add(mesh(torus(0.33, 0.016, Math.PI * 0.55, 24), light, [0, 0.37, 0.12], null, [-1.05, 0, Math.PI * 0.22]));
+
+  // Bake the colour gradient into the hair geometry (in hair-group space).
+  root.updateMatrixWorld(true);
+  const toHair = new THREE.Matrix4().copy(hair.matrixWorld).invert();
+  const base = new THREE.Color(hairColor);
+  const deep = new THREE.Color(shade(hairColor, -0.45));
+  const glow = new THREE.Color(shade(hairColor, 0.22));
+  const tmp = new THREE.Vector3();
+  const col = new THREE.Color();
+  const smooth = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  for (const m of hairMeshes) {
+    const rel = new THREE.Matrix4().multiplyMatrices(toHair, m.matrixWorld);
+    const pos = m.geometry.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      tmp.fromBufferAttribute(pos, i).applyMatrix4(rel);
+      const inner = smooth(-0.9, 0.1, tmp.y); // roots/ends darker
+      const crown = smooth(0.25, 0.55, tmp.y) * smooth(-0.1, 0.35, tmp.z); // lighter on top-front
+      col.copy(deep).lerp(base, inner).lerp(glow, crown * 0.7);
+      colors.set([col.r, col.g, col.b], i * 3);
+    }
+    m.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    m.material = hairVertexMaterial();
+  }
+  // glossy "angel ring" highlight
+  if (style !== 'buzz' && style !== 'curly') hair.add(mesh(torus(0.4, 0.014, Math.PI * 0.5, 28), flat(shade(hairColor, 0.45), 0.55), [0, 0.3, 0.17], null, [-0.95, 0, Math.PI * 0.25]));
 
   // ---- accessories on the head --------------------------------------------
   if (o.glasses) {

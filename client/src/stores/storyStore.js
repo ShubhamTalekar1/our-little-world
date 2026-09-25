@@ -1,14 +1,12 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedMilestones, seedStats } from '../data/mockData';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { remote, api } from '../services/api/client';
 
 /** Milestones for "Our Story", plus shared counters used for achievements. */
 export const useStoryStore = createStore('story', (set, get) => ({
-  milestones: DEMO_MODE ? seedMilestones() : [],
-  stats: DEMO_MODE ? seedStats() : { movies: 0, dances: 0, dates: 0, hugs: 0, messagesBase: 0 },
+  milestones: [],
+  stats: { movies: 0, dances: 0, dates: 0, hugs: 0, messagesBase: 0 },
   unlocked: {}, // achievementId → ISO date
   hydrate: (s) => set(s),
 

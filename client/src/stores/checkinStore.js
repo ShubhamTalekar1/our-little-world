@@ -1,6 +1,4 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedCheckins } from '../data/mockData';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { isSameDay } from '../lib/time';
@@ -9,7 +7,7 @@ import { EV } from '../services/realtime/events';
 import { remote, api } from '../services/api/client';
 
 export const useCheckinStore = createStore('checkins', (set, get) => ({
-  checkins: DEMO_MODE ? seedCheckins() : [],
+  checkins: [],
   hydrate: (checkins) => set({ checkins }),
   checkIn(userId, mood, note) {
     const c = { id: uid('ci'), userId, mood, note: cleanText(note ?? '', 200), at: new Date().toISOString() };

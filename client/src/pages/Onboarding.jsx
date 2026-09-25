@@ -43,10 +43,11 @@ export default function Onboarding({ joining = false }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [avatar, setAvatar] = useState(() => (joining ? AVATAR_HER : AVATAR_ME));
-  const [name, setName] = useState(joining ? '' : 'Shubham');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [partnerName, setPartnerName] = useState(joining ? 'Shubham' : 'Her');
+  const [partnerName, setPartnerName] = useState('');
+  const [since, setSince] = useState(() => new Date().toISOString().slice(0, 10));
   const [pronouns, setPronouns] = useState(joining ? 'he' : 'she');
   const [code, setCode] = useState(() => new URLSearchParams(window.location.search).get('code') ?? '');
   const joinCode = code;
@@ -81,6 +82,7 @@ export default function Onboarding({ joining = false }) {
       people.updateMe({ name: name.trim() || 'You' });
       people.updatePartner({ name: partnerName.trim() || 'Them', pronouns });
       if (!joining) people.updateCouple({ inviteCode });
+      people.updateCouple({ since: new Date(since).toISOString(), anniversary: new Date(since).toISOString() });
       const av = useAvatarStore.getState();
       av.setAvatar(av.myId, avatar);
       if (joining) av.setAvatar(people.partner.id, AVATAR_ME);
@@ -130,7 +132,7 @@ export default function Onboarding({ joining = false }) {
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
           <div>
             <label htmlFor="ob-name" className="eyebrow mb-1.5 block">Your name</label>
-            <input id="ob-name" className="field" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+            <input id="ob-name" className="field" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="What should we call you?" />
           </div>
           {!DEMO_MODE && (
             <>
@@ -215,6 +217,10 @@ export default function Onboarding({ joining = false }) {
               <option value="they">they / them</option>
             </select>
           </div>
+        </div>
+        <div className="mt-3 text-left">
+          <label htmlFor="ob-since" className="eyebrow mb-1.5 block">Together since</label>
+          <input id="ob-since" type="date" className="field" value={since} max={new Date().toISOString().slice(0, 10)} onChange={(e) => e.target.value && setSince(e.target.value)} />
         </div>
         {DEMO_MODE && <p className="mt-4 text-xs text-muted">In the demo, a simulated person joins right away so you can look around.</p>}
         <div className="mt-8 flex justify-between">

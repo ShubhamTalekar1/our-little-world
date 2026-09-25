@@ -2,7 +2,7 @@ import { ENV_BY_ID } from '../catalog/environments';
 import { timeAgo } from './time';
 
 export function presenceLabel(presence, w) {
-  if (!presence || presence.status === 'offline') return `${w.Subject} ${w.plural ? 'were' : 'was'} here ${timeAgo(presence?.lastSeen ?? Date.now())}`;
+  if (!presence || presence.status === 'offline') return `${w.Subject} ${w.was} here ${timeAgo(presence?.lastSeen ?? Date.now())}`;
   if (presence.status === 'away') return `${w.Theyre} away for a bit`;
   const a = presence.activity ?? { type: 'room' };
   switch (a.type) {

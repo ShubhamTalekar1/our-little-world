@@ -11,6 +11,8 @@ import GiftArt from '../components/gifts/GiftArt';
 import PetSprite from '../components/pet/PetSprite';
 import { usePeopleStore } from '../stores/peopleStore';
 import { useCalendarStore } from '../stores/calendarStore';
+import { useMemoryStore } from '../stores/memoryStore';
+import { useLetterStore } from '../stores/letterStore';
 import { useGiftStore } from '../stores/giftStore';
 import { usePetStore } from '../stores/petStore';
 import { useStoryStore } from '../stores/storyStore';
@@ -164,6 +166,39 @@ function LastTimeTogether() {
   );
 }
 
+/** Gentle suggestions for a brand-new world; each disappears once done. */
+function FirstSteps() {
+  const memories = useMemoryStore((s) => s.memories.length);
+  const countdowns = useCalendarStore((s) => s.countdowns.length);
+  const events = useCalendarStore((s) => s.events.length);
+  const letters = useLetterStore((s) => s.letters.length);
+  const pet = usePetStore((s) => s.pet.adopted);
+  const w = usePartnerWords();
+  const steps = [
+    !memories && { to: '/memories', emoji: '📸', text: 'Pin your first memory' },
+    !countdowns && { to: '/dates', emoji: '✈️', text: 'Count down to seeing each other' },
+    !events && { to: '/date-night', emoji: '🌃', text: 'Plan your first date night' },
+    !letters && { to: '/letters?write=1', emoji: '💌', text: `Write ${w.them} a letter for later` },
+    !pet && { to: '/world?tab=pet', emoji: '🐾', text: 'Adopt a little companion' },
+  ].filter(Boolean);
+  if (!steps.length) return null;
+  return (
+    <section className="card p-5" aria-labelledby="first-steps">
+      <h2 id="first-steps" className="eyebrow">Make it yours</h2>
+      <ul className="mt-3 flex flex-col gap-1">
+        {steps.map((s) => (
+          <li key={s.to}>
+            <Link to={s.to} className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm text-cream-dim transition hover:bg-surface-3 hover:text-cream">
+              <span aria-hidden>{s.emoji}</span>
+              {s.text}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Home() {
   const all = useCalendarStore((s) => s.countdowns);
   const countdowns = all.filter((c) => c.pinned);
@@ -187,6 +222,7 @@ export default function Home() {
         </div>
         <aside className="flex flex-col gap-4" aria-label="Our day">
           <TonightsPlan />
+          <FirstSteps />
           {countdowns.slice(0, 2).map((c) => (
             <Countdown key={c.id} countdown={c} compact />
           ))}

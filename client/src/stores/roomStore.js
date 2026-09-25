@@ -1,6 +1,6 @@
 import { createStore } from './createStore';
 import { DEMO_MODE } from '../config/env';
-import { seedRoom } from '../data/mockData';
+import { initialRoom } from '../data/demoWorld';
 import { FURNITURE_BY_ID } from '../catalog/furniture';
 import { uid } from '../lib/id';
 import { realtime } from '../services/realtime';
@@ -16,7 +16,7 @@ function sync(state) {
 }
 
 export const useRoomStore = createStore('room', (set, get) => ({
-  ...(DEMO_MODE ? seedRoom() : { environment: 'bedroom', placed: [] }),
+  ...(DEMO_MODE ? initialRoom() : { environment: 'bedroom', placed: [] }),
   hydrate: (r) => set(r),
   applyRemote: ({ environment, placed }) => set((s) => ({ environment: environment ?? s.environment, placed: placed ?? s.placed })),
 

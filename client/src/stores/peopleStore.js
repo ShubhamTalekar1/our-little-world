@@ -1,12 +1,12 @@
 import { createStore } from './createStore';
 import { DEMO_MODE } from '../config/env';
-import { seedPeople } from '../data/mockData';
+import { initialPeople } from '../data/demoWorld';
 import { remote, api } from '../services/api/client';
 
 const empty = { me: null, partner: null, couple: null };
 
 export const usePeopleStore = createStore('people', (set) => ({
-  ...(DEMO_MODE ? seedPeople() : empty),
+  ...(DEMO_MODE ? initialPeople() : empty),
   hydrate: (data) => set({ me: data.me, partner: data.partner, couple: data.couple }),
   updateMe: (patch) => {
     set((s) => ({ me: { ...s.me, ...patch } }));

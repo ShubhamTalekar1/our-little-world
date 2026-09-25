@@ -39,7 +39,7 @@ function Decorate() {
           </div>
         </Room>
         <p className="mt-3 text-xs text-muted">
-          {isBedroom ? 'Drag things around (or focus one and use the arrow keys). Changes appear in both your rooms.' : 'Decorations live in your room — switch back to the rainy window room to arrange them.'}
+          {isBedroom ? 'Drag things around, or tap one to nudge it with the arrows. Changes appear in both your rooms.' : 'Decorations live in your room — switch back to the rainy window room to arrange them.'}
         </p>
       </div>
       <div>

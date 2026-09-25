@@ -9,8 +9,8 @@ import { DEMO_MODE } from '../config/env';
 export default function Login() {
   const { login, loading, error } = useAuthStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(DEMO_MODE ? 'shubham@ourlittle.world' : '');
-  const [password, setPassword] = useState(DEMO_MODE ? 'demo-password' : '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const submit = async (e) => {
     e.preventDefault();
     if (await login(email, password)) navigate('/', { replace: true });

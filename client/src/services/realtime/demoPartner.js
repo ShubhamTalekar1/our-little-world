@@ -1,5 +1,5 @@
 import { EV } from './events';
-import { PARTNER_ID } from '../../data/mockData';
+import { PARTNER_ID } from '../../data/demoWorld';
 import { GIFTS, GIFT_MESSAGES } from '../../catalog/gifts';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { uid } from '../../lib/id';

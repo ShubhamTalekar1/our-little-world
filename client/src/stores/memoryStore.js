@@ -1,6 +1,4 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedMemories } from '../data/mockData';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -8,7 +6,7 @@ import { EV } from '../services/realtime/events';
 import { remote, api } from '../services/api/client';
 
 export const useMemoryStore = createStore('memories', (set, get) => ({
-  memories: DEMO_MODE ? seedMemories() : [],
+  memories: [],
   hydrate: (memories) => set({ memories }),
   add({ image, scene, caption, date, location }, by) {
     const m = {

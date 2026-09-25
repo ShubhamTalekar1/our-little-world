@@ -43,7 +43,7 @@ export default function DailyCheckin({ className = '' }) {
           {theirs.note && <span className="hand mt-1 block text-xl text-peach">“{theirs.note}”</span>}
         </p>
       ) : (
-        <p className="mt-2 text-sm text-muted">{w.Subject} hasn’t checked in yet today.</p>
+        <p className="mt-2 text-sm text-muted">{w.Subject} {w.v('hasn’t', 'haven’t')} checked in yet today.</p>
       )}
       <div className="my-4 h-px bg-line" />
       <AnimatePresence mode="wait" initial={false}>

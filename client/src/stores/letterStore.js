@@ -1,6 +1,4 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedLetters } from '../data/mockData';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -10,7 +8,7 @@ import { remote, api } from '../services/api/client';
 export const isUnlocked = (letter, at = Date.now()) => new Date(letter.unlockAt).getTime() <= at;
 
 export const useLetterStore = createStore('letters', (set) => ({
-  letters: DEMO_MODE ? seedLetters() : [],
+  letters: [],
   hydrate: (letters) => set({ letters }),
   write({ title, body, unlockAt, seal, paper }, from) {
     const letter = {

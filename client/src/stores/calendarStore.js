@@ -1,6 +1,4 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedCalendar } from '../data/mockData';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
 import { realtime } from '../services/realtime';
@@ -17,7 +15,8 @@ export const EVENT_TYPES = [
 ];
 
 export const useCalendarStore = createStore('calendar', (set) => ({
-  ...(DEMO_MODE ? seedCalendar() : { events: [], countdowns: [] }),
+  events: [],
+  countdowns: [],
   remindersFired: [],
   hydrate: (c) => set(c),
 

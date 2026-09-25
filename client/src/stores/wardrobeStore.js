@@ -1,11 +1,9 @@
 import { createStore } from './createStore';
-import { DEMO_MODE } from '../config/env';
-import { seedWardrobe } from '../data/mockData';
 import { uid } from '../lib/id';
 import { remote, api } from '../services/api/client';
 
 export const useWardrobeStore = createStore('wardrobe', (set, get) => ({
-  ...(DEMO_MODE ? seedWardrobe() : { outfits: [] }),
+  outfits: [],
   hydrate: (w) => set(w),
 
   saveOutfit(name, emoji, items) {

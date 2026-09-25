@@ -26,6 +26,11 @@ export function wordsFor(person) {
     /** Subject for sentences like "___ sent you a rose" */
     Subject: generic ? cap(p.they) : name,
     plural: p.they === 'they',
+    /** Verb agreeing with Subject: "She is", "They are", "Alex is". */
+    is: generic && p.they === 'they' ? 'are' : 'is',
+    was: generic && p.they === 'they' ? 'were' : 'was',
+    /** Pick the verb form agreeing with Subject: w.v('wants', 'want'). */
+    v: (singular, plural) => (generic && p.they === 'they' ? plural : singular),
   };
 }
 

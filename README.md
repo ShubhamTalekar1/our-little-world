@@ -25,7 +25,7 @@ Demo mode (`VITE_DEMO_MODE=true`, the default) runs **entirely in the browser**.
 - sends you a gift shortly after you arrive, so you see the opening animation
 - hugs and waves back, accepts movie/dance/date invitations, reacts during films
 
-Everything you do is saved in `localStorage`. **Settings → Couple** has "Reset demo world" and a switch to turn the simulated partner's spontaneous activity off.
+It starts empty — no fake history — and everything you do is saved in `localStorage`. **Settings → Couple** has "Reset demo world" and a switch to turn the simulated partner's spontaneous activity off.
 
 ## Running with the real backend
 
@@ -70,10 +70,10 @@ npm test
 ### Client architecture
 
 - **Catalogs** (`client/src/catalog/`) — clothing, gifts, environments, furniture, songs, pets, achievements. Pure data. Adding a gift or an item is one entry.
-- **Mock data** (`client/src/data/mockData.js`) — the only place demo values live (142 days together, 18 memories…). Stores seed from it; components never import it.
+- **No sample content.** Demo mode starts with an empty world — just two people (`client/src/data/demoWorld.js`) and a lamp, a plant and fairy lights in the room. Everything else fills up with what you actually do.
 - **Stores** (`client/src/stores/`) — one Zustand store per domain: auth, people, avatar, wardrobe, gifts, room, presence, activity, chat, notifications, memories, letters, calendar, check-ins, pet, music, story, call, settings, ui. Each action does an optimistic local update, emits a realtime event if the other person should know, and calls `remote(() => api…)` (a no-op in demo mode).
 - **Realtime** (`client/src/services/realtime/`) — a transport-agnostic hub. `DemoTransport` + `DemoPartner` in demo mode, `SocketTransport` otherwise. `bindings.js` routes incoming events into stores. Event names are in `events.js` (`gift:received`, `movie:play`, `interaction`, `dance:start`, `rtc:offer`, …).
-- **Environments** (`components/room/scenes/`) — seven hand-drawn SVG scenes with rain, stars, fireflies, fire, a live wall clock. New place = new scene component + catalog entry.
+- **3D world** (`components/world3d/`) — the room is a real Three.js scene: seven environments (rainy bedroom, rooftop, sunset beach, café, stargazing hill, campfire, theater) with rain, stars, a moving sea, flickering firelight and a live wall clock, plus both chibis, draggable 3D decorations and the pet, all in one canvas. New place = one component in `world3d/envs/` + a catalog entry. The older 2D scenes remain for small thumbnails and as a no-WebGL fallback.
 
 ### Server architecture
 
