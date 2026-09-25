@@ -19,7 +19,7 @@ const cache = new Map();
 export function toon(color, side = THREE.FrontSide) {
   const key = `toon:${color}:${side}`;
   // Smooth, slightly satin finish — like a little vinyl figure.
-  if (!cache.has(key)) cache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0, side }));
+  if (!cache.has(key)) cache.set(key, new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.14, roughness: 0.62, metalness: 0, side }));
   return cache.get(key);
 }
 

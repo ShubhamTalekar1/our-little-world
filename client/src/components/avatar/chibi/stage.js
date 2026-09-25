@@ -27,7 +27,7 @@ export function addLights(scene) {
 }
 
 export const LIGHTS = [
-  { type: 'hemi', sky: '#fff8f0', ground: '#6a5566', intensity: 2.1 },
+  { type: 'hemi', sky: '#fff8f0', ground: '#9a8290', intensity: 2.0 },
   { type: 'dir', color: '#ffe8d2', intensity: 1.5, position: [2, 3, 4] },
   { type: 'dir', color: '#fff4ea', intensity: 0.8, position: [0, 1, 5] },
   { type: 'dir', color: '#c9b8f0', intensity: 1.0, position: [-3, 2, -2] },
