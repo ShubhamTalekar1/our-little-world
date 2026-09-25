@@ -1,0 +1,248 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------
+   Design tokens — "late evening in a small apartment"
+   Warm lamp light on deep ink, with lavender and peach as the only
+   saturated notes. Pink is used sparingly on purpose.
+------------------------------------------------------------------- */
+@theme {
+  --color-ink: #0e0f15;
+  --color-night: #13141d;
+  --color-surface: #181923;
+  --color-surface-2: #212230;
+  --color-surface-3: #2a2b3b;
+  --color-line: rgb(245 235 221 / 0.08);
+  --color-line-strong: rgb(245 235 221 / 0.16);
+
+  --color-cream: #f5ebdd;
+  --color-cream-dim: #d9cfc2;
+  --color-muted: #a39db0;
+  --color-faint: #6f6a7c;
+
+  --color-peach: #e8b4a0;
+  --color-peach-deep: #d4937c;
+  --color-rose: #d98e96;
+  --color-lavender: #b8a7d9;
+  --color-lavender-deep: #8f7cc0;
+  --color-lamp: #f2c98b;
+  --color-sage: #9db8a0;
+  --color-sky: #8fb3d9;
+
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hand: 'Caveat', 'Segoe Print', cursive;
+
+  --radius-4xl: 2rem;
+
+  --shadow-soft: 0 10px 40px -12px rgb(0 0 0 / 0.55);
+  --shadow-glow: 0 0 0 1px rgb(245 235 221 / 0.06), 0 18px 50px -20px rgb(232 180 160 / 0.35);
+
+  --animate-twinkle: twinkle 3.2s ease-in-out infinite;
+  --animate-float-slow: float-slow 9s ease-in-out infinite;
+  --animate-flicker: flicker 5s ease-in-out infinite;
+  --animate-breathe: breathe 4.5s ease-in-out infinite;
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
+  }
+  @keyframes float-slow {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(6px, -14px, 0); }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 0.85; }
+    45% { opacity: 1; }
+    52% { opacity: 0.78; }
+    60% { opacity: 0.95; }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-ink);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-ink text-cream font-sans antialiased;
+    min-height: 100dvh;
+    font-feature-settings: 'ss01', 'cv11';
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgb(184 167 217 / 0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgb(232 180 160 / 0.07), transparent 60%),
+      var(--color-ink);
+    background-attachment: fixed;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    background: rgb(232 180 160 / 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-lamp);
+    outline-offset: 3px;
+    border-radius: 10px;
+  }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  input, textarea, select { font: inherit; }
+
+  /* thin warm scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: rgb(245 235 221 / 0.14) transparent; }
+}
+
+@layer components {
+  .glass {
+    background: linear-gradient(180deg, rgb(33 34 48 / 0.72), rgb(24 25 35 / 0.66));
+    border: 1px solid var(--color-line);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+  .card {
+    @apply rounded-3xl border border-line bg-surface/80;
+    box-shadow: var(--shadow-soft);
+  }
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.22em] text-muted;
+  }
+  .field {
+    @apply w-full rounded-2xl border border-line bg-surface-2/70 px-4 py-3 text-sm text-cream placeholder:text-faint
+      transition focus:border-peach/50 focus:bg-surface-2 focus:outline-none;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2/60 px-3 py-1 text-xs text-cream-dim;
+  }
+  .hand {
+    font-family: var(--font-hand);
+  }
+  .paper {
+    background:
+      repeating-linear-gradient(0deg, transparent 0 27px, rgb(120 100 80 / 0.12) 27px 28px),
+      linear-gradient(180deg, #f8f0e3, #efe3d0);
+    color: #3b3128;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Rain streaks used by several environments */
+@keyframes rain-fall {
+  from { transform: translate3d(0, -20%, 0); }
+  to { transform: translate3d(-6%, 110%, 0); }
+}
+.rain-drop {
+  position: absolute;
+  top: -10%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgb(200 210 240 / 0.45));
+  animation: rain-fall linear infinite;
+}
+
+@keyframes drift-up {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translate3d(12px, -120px, 0); opacity: 0; }
+}
+.mote {
+  position: absolute;
+  border-radius: 9999px;
+  animation: drift-up linear infinite;
+}
+
+@keyframes cloud-drift {
+  from { transform: translateX(-30%); }
+  to { transform: translateX(130%); }
+}
+
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+.avatar-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 5.5s infinite;
+}
+
+@keyframes flame {
+  0%, 100% { transform: scale(1, 1) translateY(0); }
+  33% { transform: scale(0.94, 1.08) translateY(-1px); }
+  66% { transform: scale(1.05, 0.95) translateY(0.5px); }
+}
+.flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: flame 1.4s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.sway {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sway 6s ease-in-out infinite;
+}
+
+/* Honour reduced motion globally — Framer Motion is handled via MotionConfig */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@keyframes svg-rain {
+  from { transform: translate(0, -80px); }
+  to { transform: translate(-40px, 620px); }
+}
+.svg-rain line { animation: svg-rain linear infinite; }
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.25; transform: translateX(0); }
+  50% { opacity: 0.8; transform: translateX(8px); }
+}
+.shimmer { animation: shimmer 4s ease-in-out infinite; transform-box: fill-box; }
+
+@keyframes shooting {
+  0%, 88% { transform: translate(0, 0); opacity: 0; }
+  90% { opacity: 1; }
+  100% { transform: translate(-380px, 190px); opacity: 0; }
+}
+.shooting-star { animation: shooting 11s ease-in infinite; }
+
+@keyframes rise-spark {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--dx, 10px), -220px); opacity: 0; }
+}
+.spark { animation: rise-spark 2.6s ease-out infinite; transform-box: fill-box; }
+
+@keyframes sticker-bounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes sticker-pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.14) } }
+@keyframes sticker-wobble { 0%,100% { transform: rotate(0) } 25% { transform: rotate(-8deg) } 75% { transform: rotate(8deg) } }
+@keyframes sticker-float { 0%,100% { transform: translateY(0) rotate(-3deg) } 50% { transform: translateY(-6px) rotate(3deg) } }
+@keyframes sticker-spin { 0% { transform: rotate(0) scale(1) } 50% { transform: rotate(12deg) scale(1.08) } 100% { transform: rotate(0) scale(1) } }
+.sticker-bounce { animation: sticker-bounce 1.4s ease-in-out infinite; }
+.sticker-pulse { animation: sticker-pulse 1.3s ease-in-out infinite; }
+.sticker-wobble { animation: sticker-wobble 1.6s ease-in-out infinite; }
+.sticker-float { animation: sticker-float 2.6s ease-in-out infinite; }
+.sticker-spin { animation: sticker-spin 2s ease-in-out infinite; }
