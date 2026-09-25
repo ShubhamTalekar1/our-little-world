@@ -79,10 +79,18 @@ export default function Settings() {
         </nav>
         <div className="flex min-w-0 flex-col gap-4">
           <Section id="profile" title="Profile" description="How you show up in your little world.">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label htmlFor="my-name" className="eyebrow mb-1.5 block">Your name</label>
                 <input id="my-name" className="field" maxLength={40} value={me?.name ?? ''} onChange={(e) => updateMe({ name: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="my-pro" className="eyebrow mb-1.5 block">Your pronouns</label>
+                <select id="my-pro" className="field" value={me?.pronouns ?? 'they'} onChange={(e) => updateMe({ pronouns: e.target.value })}>
+                  <option value="she">she / her</option>
+                  <option value="he">he / him</option>
+                  <option value="they">they / them</option>
+                </select>
               </div>
               <div>
                 <label htmlFor="my-tz" className="eyebrow mb-1.5 block">Your time zone</label>

@@ -11,10 +11,11 @@ import { remote, api } from '../services/api/client';
 const clamp = (n) => Math.max(0, Math.min(100, n));
 const HOUR = 3_600_000;
 
-function sync(pet) {
+/** Tell the other person; `write` persists the change (server enforces prices). */
+function sync(pet, write) {
   const { log, ...rest } = pet;
   realtime.emit(EV.PET_UPDATE, { pet: rest });
-  remote(() => api.put('/rooms/pet', rest));
+  if (write) remote(write);
 }
 
 export const usePetStore = createStore('pet', (set, get) => ({
@@ -32,7 +33,7 @@ export const usePetStore = createStore('pet', (set, get) => ({
   adopt(species, name) {
     const pet = { ...get().pet, adopted: true, species, name: cleanText(name, 24) || 'Mochi', accessory: 'bow', hunger: 80, happiness: 90, lastTick: new Date().toISOString(), log: [] };
     set({ pet });
-    sync(pet);
+    sync(pet, () => api.put('/rooms/pet', { adopted: true, species, name: pet.name }));
   },
   log(text) {
     set((s) => ({ pet: { ...s.pet, log: [{ at: new Date().toISOString(), text }, ...(s.pet.log ?? [])].slice(0, 20) } }));
@@ -43,28 +44,28 @@ export const usePetStore = createStore('pet', (set, get) => ({
     if (!useWalletStore.getState().spend(food.price, `${food.name} for ${get().pet.name}`)) return { ok: false, reason: 'coins' };
     set((s) => ({ pet: { ...s.pet, hunger: clamp(s.pet.hunger + food.hunger), happiness: clamp(s.pet.happiness + 4) } }));
     get().log(`${who} fed ${get().pet.name} ${food.emoji}`);
-    sync(get().pet);
+    sync(get().pet, () => api.post('/rooms/pet/feed', { food: foodId }));
     return { ok: true };
   },
   play(who = 'You') {
     set((s) => ({ pet: { ...s.pet, happiness: clamp(s.pet.happiness + 12), hunger: clamp(s.pet.hunger - 3) } }));
     get().log(`${who} played with ${get().pet.name}`);
-    sync(get().pet);
+    sync(get().pet, () => api.post('/rooms/pet/play'));
   },
   rename(name) {
     set((s) => ({ pet: { ...s.pet, name: cleanText(name, 24) || s.pet.name } }));
-    sync(get().pet);
+    sync(get().pet, () => api.put('/rooms/pet', { name: get().pet.name }));
   },
   setAccessory(id) {
     set((s) => ({ pet: { ...s.pet, accessory: id } }));
-    sync(get().pet);
+    sync(get().pet, () => api.put('/rooms/pet', { accessory: id }));
   },
   buyAccessory(id) {
     const acc = PET_ACCESSORIES.find((a) => a.id === id);
     if (!acc || get().pet.ownedAccessories.includes(id)) return { ok: true };
     if (!useWalletStore.getState().spend(acc.price, `${acc.name} for ${get().pet.name}`)) return { ok: false, reason: 'coins' };
     set((s) => ({ pet: { ...s.pet, ownedAccessories: [...s.pet.ownedAccessories, id], accessory: id } }));
-    sync(get().pet);
+    sync(get().pet, () => api.post('/rooms/pet/accessory', { id }));
     return { ok: true };
   },
   applyRemote: (pet) => set((s) => ({ pet: { ...s.pet, ...pet } })),

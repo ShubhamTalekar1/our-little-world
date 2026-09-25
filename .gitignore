@@ -7,3 +7,4 @@ dist/
 server/uploads/*
 !server/uploads/.gitkeep
 server/src/generated/
+dist-real/

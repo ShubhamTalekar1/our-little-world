@@ -1,0 +1,14 @@
+{
+  "name": "our-little-world",
+  "private": true,
+  "description": "A private little world for two people.",
+  "scripts": {
+    "setup": "npm --prefix client install && npm --prefix server install",
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "server": "npm --prefix server run dev",
+    "db:up": "docker compose up -d",
+    "db:migrate": "npm --prefix server run db:deploy",
+    "test": "npm --prefix server test"
+  }
+}

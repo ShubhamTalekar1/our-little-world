@@ -32,6 +32,9 @@ export const useLetterStore = createStore('letters', (set) => ({
   receive: (letter) => set((s) => (s.letters.some((l) => l.id === letter.id) ? s : { letters: [letter, ...s.letters] })),
   markOpened(id) {
     set((s) => ({ letters: s.letters.map((l) => (l.id === id && !l.openedAt ? { ...l, openedAt: new Date().toISOString() } : l)) }));
-    remote(() => api.post(`/letters/${id}/open`));
+    // The server only reveals a sealed letter's words once it has unlocked.
+    remote(() => api.post(`/letters/${id}/open`)).then((res) => {
+      if (res?.letter) set((s) => ({ letters: s.letters.map((l) => (l.id === id ? { ...l, ...res.letter } : l)) }));
+    });
   },
 }));

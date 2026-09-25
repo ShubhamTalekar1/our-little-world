@@ -23,7 +23,7 @@ export const useGiftStore = createStore('gifts', (set, get) => ({
     const record = { id: uid('g'), giftId, to: toId, message: cleanText(message, 200), at: new Date().toISOString() };
     set((s) => ({ sent: [record, ...s.sent] }));
     realtime.emit(EV.GIFT_SENT, { id: record.id, giftId, message: record.message });
-    remote(() => api.post('/gifts/send', { giftId, message: record.message }));
+    remote(() => api.post('/gifts/send', { id: record.id, giftId, message: record.message }));
     return { ok: true, gift: record };
   },
 

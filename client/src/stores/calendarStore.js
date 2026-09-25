@@ -47,5 +47,9 @@ export const useCalendarStore = createStore('calendar', (set) => ({
     set((s) => ({ countdowns: s.countdowns.filter((c) => c.id !== id) }));
     remote(() => api.delete(`/events/countdowns/${id}`));
   },
-  togglePin: (id) => set((s) => ({ countdowns: s.countdowns.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)) })),
+  togglePin: (id) => {
+    set((s) => ({ countdowns: s.countdowns.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)) }));
+    const c = useCalendarStore.getState().countdowns.find((x) => x.id === id);
+    remote(() => api.patch(`/events/countdowns/${id}`, { pinned: c?.pinned }));
+  },
 }));

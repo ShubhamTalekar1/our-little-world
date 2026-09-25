@@ -5,6 +5,8 @@ export function getAudioContext() {
   if (typeof window === 'undefined') return null;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
+  // Never make the first sound before the person has interacted with the page.
+  if (!ctx && navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
   if (!ctx) ctx = new AC();
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;

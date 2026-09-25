@@ -48,10 +48,13 @@ export default function Onboarding({ joining = false }) {
   const [password, setPassword] = useState('');
   const [partnerName, setPartnerName] = useState(joining ? 'Shubham' : 'Her');
   const [pronouns, setPronouns] = useState(joining ? 'he' : 'she');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => new URLSearchParams(window.location.search).get('code') ?? '');
+  const joinCode = code;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const inviteCode = useMemo(() => makeInviteCode(), []);
+  const localCode = useMemo(() => makeInviteCode(), []);
+  const [serverCode, setServerCode] = useState(null);
+  const inviteCode = serverCode ?? localCode;
   const register = useAuthStore((s) => s.register);
   const inviteLink = `${window.location.origin}/join?code=${inviteCode}`;
 
@@ -64,9 +67,10 @@ export default function Onboarding({ joining = false }) {
     if (DEMO_MODE) return next();
     if (!email.includes('@') || password.length < 8) return setError('Use a real email and a password of at least 8 characters');
     setBusy(true);
-    const res = await register({ name, email, password, inviteCode: joining ? normalizeInviteCode(code || new URLSearchParams(window.location.search).get('code') || '') : undefined });
+    const res = await register({ name, email, password, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, inviteCode: joining ? normalizeInviteCode(joinCode) : undefined });
     setBusy(false);
     if (!res.ok) return setError(res.error);
+    if (res.couple?.inviteCode) setServerCode(res.couple.inviteCode);
     await api.put('/avatars/me', { config: avatar }).catch(() => {});
     next();
   };
@@ -119,7 +123,7 @@ export default function Onboarding({ joining = false }) {
     // 2 — create yourself
     <motion.div key="create" {...fade}>
       <div className="mb-6 text-center">
-        <p className="eyebrow">Step one</p>
+        <p className="eyebrow">{joining ? 'Step two' : 'Step one'}</p>
         <h1 className="mt-2 text-4xl font-light text-cream">Create yourself.</h1>
       </div>
       <div className="glass rounded-4xl p-4 sm:p-6">
@@ -155,11 +159,11 @@ export default function Onboarding({ joining = false }) {
     // 3 — invite / join
     joining ? (
       <motion.div key="join" {...fade} className="mx-auto max-w-md text-center">
-        <p className="eyebrow">Step two</p>
+        <p className="eyebrow">Step one</p>
         <h1 className="mt-2 text-4xl font-light text-cream">Find your person.</h1>
         <p className="mt-3 text-muted">Enter the code they gave you.</p>
         <label htmlFor="ob-code" className="sr-only">Invite code</label>
-        <input id="ob-code" className="field mt-6 text-center font-mono text-xl tracking-[0.3em] uppercase" placeholder="LOVE-XXXX" value={code || new URLSearchParams(window.location.search).get('code') || ''} onChange={(e) => setCode(e.target.value)} />
+        <input id="ob-code" className="field mt-6 text-center font-mono text-xl tracking-[0.3em] uppercase" placeholder="LOVE-XXXX" value={code} onChange={(e) => setCode(e.target.value)} />
         <div className="mt-4 grid grid-cols-2 gap-3 text-left">
           <div>
             <label htmlFor="ob-pn" className="eyebrow mb-1.5 block">Their name</label>
@@ -174,9 +178,10 @@ export default function Onboarding({ joining = false }) {
             </select>
           </div>
         </div>
+        {error && <p className="mt-3 text-sm text-rose" role="alert">{error}</p>}
         <div className="mt-8 flex justify-between">
           <Button variant="ghost" icon={ArrowLeft} onClick={back}>Back</Button>
-          <Button variant="primary" onClick={next}>
+          <Button variant="primary" onClick={() => (!DEMO_MODE && !normalizeInviteCode(code).match(/^LOVE-[A-Z0-9]{4}$/) ? setError('That code should look like LOVE-7K4P') : (setError(null), next()))}>
             Join our world <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -244,13 +249,18 @@ export default function Onboarding({ joining = false }) {
     </motion.div>,
   ];
 
+  // People joining enter their code before creating an account (it links them
+  // to the right world); people starting a world create themselves first.
+  const ordered = joining ? [steps[0], steps[2], steps[1], steps[3]] : steps;
+  const createStep = joining ? 2 : 1;
+
   return (
     <div className="relative min-h-dvh px-4 py-8 sm:px-6">
-      <Backdrop dim={step === 1 ? 0.82 : 0.55} />
-      <div className={cn('mx-auto', step === 1 ? 'max-w-6xl' : 'max-w-3xl')}>
-        <Dots step={step} total={steps.length} />
+      <Backdrop dim={step === createStep ? 0.82 : 0.55} />
+      <div className={cn('mx-auto', step === createStep ? 'max-w-6xl' : 'max-w-3xl')}>
+        <Dots step={step} total={ordered.length} />
         <div className="mt-6">
-          <AnimatePresence mode="wait">{steps[step]}</AnimatePresence>
+          <AnimatePresence mode="wait">{ordered[step]}</AnimatePresence>
         </div>
       </div>
     </div>

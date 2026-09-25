@@ -76,7 +76,7 @@ function LetterReader({ letter, onClose }) {
     const t1 = setTimeout(() => setStage('open'), 500);
     const t2 = setTimeout(() => {
       setStage('paper');
-      if (!letter.openedAt && letter.from !== people.me?.id) {
+      if ((!letter.openedAt || letter.sealed) && letter.from !== people.me?.id) {
         markOpened(letter.id);
         playSfx('open');
       }

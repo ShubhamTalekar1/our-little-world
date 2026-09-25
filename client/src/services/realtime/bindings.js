@@ -1,4 +1,5 @@
 import { realtime } from './index';
+import { DEMO_MODE } from '../../config/env';
 import { EV } from './events';
 import { GIFTS_BY_ID } from '../../catalog/gifts';
 import { INTERACTIONS_BY_ID } from '../../catalog/interactions';
@@ -26,7 +27,8 @@ import { useSettingsStore } from '../../stores/settingsStore';
 const notify = (prefKey, n, sound = 'notification') => {
   const prefs = useSettingsStore.getState().notifications;
   if (prefKey && prefs[prefKey] === false) return;
-  useNotificationStore.getState().push(n);
+  // With a real backend the server stores notifications and sends them to us.
+  if (DEMO_MODE) useNotificationStore.getState().push(n);
   if (sound) playSfx(sound);
 };
 
@@ -148,6 +150,11 @@ export function bindRealtime() {
   on(EV.EVENT_CREATED, ({ event }) => {
     useCalendarStore.getState().receiveEvent(event);
     notify('reminders', { type: 'event', title: `New plan: ${event.title} ${event.emoji ?? ''}`, body: new Date(event.at).toLocaleString(), link: '/dates' });
+  });
+  // Server-created notifications (real backend only).
+  on('notification:new', (n) => {
+    const store = useNotificationStore.getState();
+    if (!store.items.some((x) => x.id === n.id)) useNotificationStore.setState({ items: [n, ...store.items].slice(0, 60) });
   });
   on(EV.PET_UPDATE, ({ pet }) => usePetStore.getState().applyRemote(pet));
 

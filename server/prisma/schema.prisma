@@ -1,0 +1,332 @@
+// Our Little World — data model.
+//
+// Design notes
+// - Everything private hangs off a Couple; every query is scoped by coupleId.
+// - Catalog data (clothing, gifts, furniture, songs) lives in code, not tables:
+//   rows store catalog keys (e.g. "hoodie-lav"), so AvatarItem / GiftCatalog
+//   tables aren't needed until users can create their own items.
+// - Avatar config, outfits, room layout and activity state are small JSON
+//   documents owned by one row; they're always read/written whole.
+// - Presence is ephemeral and lives in Redis (or memory), not Postgres.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Couple {
+  id            String    @id @default(cuid())
+  name          String    @default("Our little world")
+  since         DateTime  @default(now())
+  anniversary   DateTime?
+  inviteCode    String    @unique
+  inviteUsedAt  DateTime?
+  /// Shared counters: movies, dances, dates, hugs…
+  stats         Json      @default("{}")
+  createdAt     DateTime  @default(now())
+
+  users         User[]
+  gifts         Gift[]
+  messages      Message[]
+  media         Media[]
+  memories      Memory[]
+  letters       Letter[]
+  events        SharedEvent[]
+  countdowns    Countdown[]
+  activities    Activity[]
+  milestones    Milestone[]
+  achievements  Achievement[]
+  checkIns      CheckIn[]
+  room          Room?
+  pet           Pet?
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  pronouns      String    @default("they")
+  timezone      String    @default("UTC")
+  tokenVersion  Int       @default(0) // bump to log out everywhere
+  lastSeenAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  coupleId      String?
+  couple        Couple?   @relation(fields: [coupleId], references: [id], onDelete: SetNull)
+
+  avatar        Avatar?
+  wallet        Wallet?
+  wardrobe      WardrobeItem[]
+  outfits       Outfit[]
+  giftsSent     Gift[]         @relation("GiftSender")
+  giftsReceived Gift[]         @relation("GiftRecipient")
+  messages      Message[]
+  notifications Notification[]
+  checkIns      CheckIn[]
+  participations ActivityParticipant[]
+
+  @@index([coupleId])
+}
+
+model Avatar {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config    Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Clothing a user has unlocked (free starter items are implicit).
+model WardrobeItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemKey   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, itemKey])
+}
+
+model Outfit {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  emoji     String   @default("✨")
+  favorite  Boolean  @default(false)
+  items     Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// "VirtualCurrency" — Love Coins. Never real money.
+model Wallet {
+  userId         String        @id
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance        Int           @default(500)
+  lastDailyClaim DateTime?
+  transactions   Transaction[]
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  walletId  String
+  wallet    Wallet   @relation(fields: [walletId], references: [userId], onDelete: Cascade)
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([walletId, createdAt])
+}
+
+/// A sent gift. The recipient's "GiftInventory" is simply their received gifts.
+model Gift {
+  id          String    @id @default(cuid())
+  coupleId    String
+  couple      Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User      @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User      @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  giftKey     String
+  revealedKey String?   // mystery gifts resolve on opening
+  message     String    @default("")
+  openedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([coupleId, createdAt])
+}
+
+model Room {
+  coupleId    String   @id
+  couple      Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  environment String   @default("bedroom")
+  owned       String[] @default(["plant", "lamp", "fairy"])
+  /// RoomItem[] — [{ uid, id, x, y }]; positions are percentages.
+  placed      Json     @default("[]")
+  updatedAt   DateTime @updatedAt
+}
+
+model Pet {
+  coupleId         String   @id
+  couple           Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  adopted          Boolean  @default(false)
+  species          String   @default("cat")
+  name             String   @default("")
+  accessory        String   @default("bow")
+  hunger           Float    @default(80)
+  happiness        Float    @default(90)
+  lastTick         DateTime @default(now())
+  ownedAccessories String[] @default(["none", "bow"])
+}
+
+/// A shared session: movie, dance, date, call, music.
+/// MovieSession / MusicSession live here as `type` + `state`.
+model Activity {
+  id           String    @id @default(cuid())
+  coupleId     String
+  couple       Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  type         String
+  state        Json      @default("{}")
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  participants ActivityParticipant[]
+
+  @@index([coupleId, type])
+}
+
+model ActivityParticipant {
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt   DateTime @default(now())
+
+  @@id([activityId, userId])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  coupleId  String
+  couple    Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  type      String    @default("text") // text | image | voice | sticker | gif
+  text      String?
+  mediaUrl  String?
+  duration  Int?
+  stickerId String?
+  reactions Json      @default("{}")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([coupleId, createdAt])
+}
+
+model Media {
+  id         String   @id @default(cuid())
+  coupleId   String
+  couple     Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  uploaderId String
+  path       String
+  mime       String
+  size       Int
+  createdAt  DateTime @default(now())
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  coupleId  String
+  couple    Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  authorId  String
+  image     String?
+  scene     String?
+  caption   String
+  location  String   @default("")
+  date      DateTime
+  rotation  Float    @default(0)
+  reactions Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([coupleId, date])
+}
+
+model Letter {
+  id        String    @id @default(cuid())
+  coupleId  String
+  couple    Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  authorId  String
+  title     String
+  body      String
+  seal      String    @default("heart")
+  paper     String    @default("cream")
+  unlockAt  DateTime
+  openedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([coupleId, unlockAt])
+}
+
+model SharedEvent {
+  id        String   @id @default(cuid())
+  coupleId  String
+  couple    Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  creatorId String
+  title     String
+  emoji     String   @default("❤️")
+  type      String   @default("date")
+  at        DateTime
+  reminder  Int      @default(15) // minutes before
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([coupleId, at])
+}
+
+model Countdown {
+  id       String   @id @default(cuid())
+  coupleId String
+  couple   Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  title    String
+  emoji    String   @default("⏳")
+  target   DateTime
+  accent   String   @default("peach")
+  pinned   Boolean  @default(true)
+}
+
+model CheckIn {
+  id        String   @id @default(cuid())
+  coupleId  String
+  couple    Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       String   // YYYY-MM-DD in the user's time zone — one per day
+  mood      String
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, day])
+}
+
+/// "Our Story" entries (auto "firsts" and hand-written moments).
+model Milestone {
+  id       String   @id @default(cuid())
+  coupleId String
+  couple   Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  emoji    String   @default("✨")
+  title    String
+  note     String   @default("")
+  date     DateTime
+  kind     String   @default("manual")
+  autoKey  String?
+
+  @@unique([coupleId, autoKey])
+}
+
+model Achievement {
+  coupleId   String
+  couple     Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  key        String
+  unlockedAt DateTime @default(now())
+
+  @@id([coupleId, key])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String   @default("")
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

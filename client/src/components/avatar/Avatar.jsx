@@ -7,6 +7,7 @@ import { HairBack, HairFront } from './parts/Hair';
 import Face from './parts/Face';
 import { Bottom, Top, Outer, Dress, Shoes, sleeveFor } from './parts/Clothing';
 import { Glasses, Hat, Earrings, Necklace, Bag } from './parts/Accessories';
+import { BLANK_AVATAR } from '../../data/defaultAvatars';
 
 /**
  * Arm angles in degrees. 0 = hanging straight down. Positive rotates the hand
@@ -103,7 +104,7 @@ const BASIC_TOP = { style: 'tee', color: '#D8D2C8' };
 const BASIC_BOTTOM = { style: 'shorts', color: '#8C8A94' };
 
 function Avatar({
-  config,
+  config: given,
   size = 240,
   pose = 'idle',
   expression = null,
@@ -114,7 +115,8 @@ function Avatar({
   label,
 }) {
   const uid = useId().replace(/:/g, '');
-  if (!config) return null;
+  // Someone who hasn't made their avatar yet still gets a gentle default.
+  const config = given ?? BLANK_AVATAR;
   const dims = bodyDims(config.bodyType);
   const o = resolveOutfit(config.outfit);
   const top = o.top ?? (o.dress ? null : BASIC_TOP);
