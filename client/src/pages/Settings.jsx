@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import TicketCard from '../components/cinema/TicketCard';
+import { useCinemaStore } from '../stores/cinemaStore';
 import { Copy, LogOut, Volume2, RotateCcw } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
@@ -27,7 +29,8 @@ function Section({ id, title, description, children }) {
 
 const SECTIONS = [
   ['profile', 'Profile'],
-  ['person', 'Your person'],
+  ['person', FRIENDS ? 'Your friend' : 'Your person'],
+  ...(isEnabled('movie') ? [['tickets', 'Tickets']] : []),
   ['account', 'Account'],
   ['notifications', 'Notifications'],
   ['privacy', 'Privacy'],
@@ -35,6 +38,36 @@ const SECTIONS = [
   ['appearance', 'Appearance & motion'],
   ['couple', FRIENDS ? 'Your world' : 'Couple'],
 ];
+
+function Tickets({ holder }) {
+  const tickets = useCinemaStore((st) => st.tickets);
+  const load = useCinemaStore((st) => st.load);
+  useEffect(() => {
+    load();
+  }, [load]);
+  return (
+    <Section id="tickets" title="Tickets" description="Every film you’ve had a seat for. Keep them, like the stubs in a drawer.">
+      {tickets.length === 0 ? (
+        <p className="text-sm text-muted">
+          No tickets yet.{' '}
+          <Link to="/together/movie" className="text-peach hover:underline">
+            See what’s showing
+          </Link>
+        </p>
+      ) : (
+        <ul className="grid gap-3 xl:grid-cols-2">
+          {tickets.map((t) => (
+            <li key={t.id}>
+              <Link to={`/together/movie/${encodeURIComponent(t.showingKey)}`} aria-label={`${t.title}, seat ${t.seat} — go to the theatre`} className="block transition hover:-translate-y-0.5">
+                <TicketCard ticket={t} holder={holder} compact />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
 
 export default function Settings() {
   const s = useSettingsStore();
@@ -97,6 +130,8 @@ export default function Settings() {
               </div>
             </div>
           </Section>
+
+          {isEnabled('movie') && <Tickets holder={me?.name} />}
 
           <Section id="account" title="Account">
             <p className="text-sm text-cream-dim">{me?.email}</p>

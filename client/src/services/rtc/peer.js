@@ -5,6 +5,7 @@ import { EV } from '../realtime/events';
 
 // STUN/TURN come from the server (so TURN credentials can change without a rebuild).
 let iceServers = ICE_SERVERS;
+export const currentIceServers = () => iceServers;
 export async function loadIceServers() {
   if (DEMO_MODE) return;
   try {

@@ -32,7 +32,7 @@ export default function InvitationLayer() {
     const inv = respond(accept);
     if (accept && inv) {
       playSfx('success');
-      navigate(ACTIVITY_META[inv.type]?.path ?? '/together');
+      navigate(inv.meta?.path ?? ACTIVITY_META[inv.type]?.path ?? '/together');
     }
   };
 

@@ -40,6 +40,8 @@ model Couple {
   activities    Activity[]
   milestones    Milestone[]
   achievements  Achievement[]
+  showings      Showing[]
+  tickets       Ticket[]
   checkIns      CheckIn[]
   room          Room?
   pet           Pet?
@@ -294,4 +296,42 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Cinema: films "now showing" in the couple's little theatre, and the tickets
+// each person keeps. Tickets copy the film details so they outlive a showing.
+model Showing {
+  id          String   @id @default(cuid())
+  coupleId    String
+  couple      Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  createdById String
+  title       String
+  tagline     String   @default("")
+  genre       String   @default("")
+  poster      String?
+  palette     Int      @default(0)
+  kind        String   // stream | youtube | link
+  source      String?
+  startsAt    DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([coupleId, createdAt])
+}
+
+model Ticket {
+  id         String    @id @default(cuid())
+  coupleId   String
+  couple     Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  userId     String
+  showingKey String
+  title      String
+  poster     String?
+  palette    Int       @default(0)
+  seat       String
+  code       String
+  createdAt  DateTime  @default(now())
+  usedAt     DateTime?
+
+  @@unique([userId, showingKey])
+  @@index([coupleId, createdAt])
 }

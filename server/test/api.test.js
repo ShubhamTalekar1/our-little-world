@@ -178,3 +178,30 @@ test('locked features are closed on the server too', async () => {
     Object.assign(config, saved);
   }
 });
+
+test('cinema: showings, adjacent seats, tickets are private', async () => {
+  const bad = await call('POST', '/cinema/showings', { token: A.token, body: { title: 'Nope', kind: 'link', source: 'javascript:alert(1)' } });
+  assert.equal(bad.status, 400);
+  const s = await call('POST', '/cinema/showings', { token: A.token, body: { title: 'Our film', tagline: 'Tonight only', kind: 'stream', palette: 3 } });
+  assert.equal(s.status, 201);
+  assert.equal(s.data.showing.hostId, A.id);
+
+  const listB = await call('GET', '/cinema/showings', { token: B.token });
+  assert.ok(listB.data.showings.some((x) => x.id === s.data.showing.id));
+  assert.equal((await call('GET', '/cinema/showings', { token: C.token })).data.showings.length, 0);
+
+  const ta = await call('POST', '/cinema/tickets', { token: A.token, body: { showingKey: s.data.showing.id } });
+  const tb = await call('POST', '/cinema/tickets', { token: B.token, body: { showingKey: s.data.showing.id } });
+  assert.equal(ta.status, 201);
+  assert.deepEqual([ta.data.ticket.seat, tb.data.ticket.seat].sort(), ['F7', 'F8']);
+  const again = await call('POST', '/cinema/tickets', { token: A.token, body: { showingKey: s.data.showing.id } });
+  assert.equal(again.data.ticket.id, ta.data.ticket.id, 'one ticket per person per film');
+  assert.equal((await call('POST', '/cinema/tickets', { token: C.token, body: { showingKey: s.data.showing.id } })).status, 400);
+  assert.equal((await call('POST', `/cinema/tickets/${ta.data.ticket.id}/check-in`, { token: B.token })).status, 404);
+  const used = await call('POST', `/cinema/tickets/${ta.data.ticket.id}/check-in`, { token: A.token });
+  assert.ok(used.data.ticket.usedAt);
+  const house = await call('POST', '/cinema/tickets', { token: B.token, body: { showingKey: 'film:bbb' } });
+  assert.equal(house.data.ticket.title, 'Big Buck Bunny');
+  assert.equal((await call('DELETE', `/cinema/showings/${s.data.showing.id}`, { token: B.token })).status, 403);
+  assert.equal((await call('GET', '/cinema/tickets', { token: A.token })).data.tickets.length, 1);
+});

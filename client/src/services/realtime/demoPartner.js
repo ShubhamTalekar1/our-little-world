@@ -165,6 +165,18 @@ export class DemoPartner {
       case EV.MOVIE_LOAD:
         this.say(pick(['ooh good choice', 'I’ve wanted to see this!', 'okay getting blanket']), 1500);
         break;
+      case EV.THEATRE_STATE:
+        // In the demo they're never far behind: they take their seat a moment after you.
+        if (['walking', 'seated'].includes(payload.stage) && !this.seatedFor?.[payload.key]) {
+          this.seatedFor = { ...this.seatedFor, [payload.key]: true };
+          this.deliver(EV.PRESENCE_UPDATE, { status: 'online', activity: { type: 'movie', detail: payload.key } });
+          this.schedule(900, () => this.deliver(EV.THEATRE_STATE, { key: payload.key, stage: 'walking' }));
+          this.schedule(4200, () => {
+            this.deliver(EV.THEATRE_STATE, { key: payload.key, stage: 'seated' });
+            this.say(pick(['got the popcorn 🍿', 'best seats in the house', 'phones on silent!']), 800);
+          });
+        }
+        break;
       case EV.RTC_END:
         this.inCall = false;
         break;

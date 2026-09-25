@@ -115,13 +115,18 @@ NODE_ENV=production DATABASE_URL=... JWT_SECRET=... npm start
 2. You'll get a code like `HI-7K4P` and a link like `https://your-site/join?code=HI-7K4P`. Send her the link (**Settings → Your world** shows it again).
 3. She opens it, picks her name and look, and creates her account. Your screen updates the moment she's in. The code only works once, and a world holds exactly two people.
 
-### Movie night tips
+### Movie night: the cinema
 
-- **YouTube links** are the easiest way to watch something together: paste the link, and both of you get the same video with play, pause and seeking in sync.
-- **Any direct `https://…mp4` link** works too.
-- **A file on your device:** you each pick your own copy of the same file. Nothing is uploaded; when you pick a file, she gets a prompt to pick hers.
-- Whoever arrives second catches up automatically to the same film and moment. If her browser blocks autoplay, she gets a "tap to join" button.
-- Chat sits next to the film on a laptop and under it on a phone.
+1. **Now Showing** (`/together/movie`) is a wall of posters. Two open films are always on, and **Put a film on** adds your own with a title, tagline, genre, optional showtime, and a painted poster or your own image.
+2. Tap a poster, then **Get my ticket**. The ticket prints with your seat (you get F7 and F8, side by side) and is kept under **Settings → Tickets**.
+3. **Go to Screen 1** takes you into the 3D cinema. The usher checks your ticket, tears the stub and points you to your seat. You walk down the steps and sit, and she does the same.
+4. Once you're both seated, the curtains open and the film plays on the big screen in the theatre. **Enlarge screen** zooms in to a full player (with a full-screen button); **Theatre view** zooms back out.
+
+How the film gets to her:
+
+- **"I'll stream it" (recommended):** in your seat, choose the file on your computer. It streams live from your browser to hers over WebRTC, picture and sound, so she needs nothing and it's always in sync. Only you control play and pause; her buttons ask you. Use Chrome or Edge on a laptop to stream (Safari can't capture video); she can watch on anything, including a phone. Keep the theatre open while you stream, because leaving the page stops the film.
+- **YouTube / video link:** both of you play the same video, and play, pause and seeking stay in sync. Whoever arrives second catches up automatically.
+- If your networks are strict (some mobile carriers, office wifi) and the stream never connects, add a TURN server (`TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL`).
 
 ---
 
@@ -133,7 +138,8 @@ NODE_ENV=production DATABASE_URL=... JWT_SECRET=... npm start
 | Avatars | `components/avatar/` | 3D chibi characters (Three.js / React Three Fiber) with poses & expressions, `AvatarCustomizer` |
 | Wardrobe | `pages/Wardrobe.jsx` | Closet, saved/renamed/favourite outfits |
 | Gifts | `pages/Gifts.jsx`, `components/gifts/` | Shop, send animation, full-screen opening, "send a kiss back" |
-| Together | `pages/Together.jsx` | Movie night (sync + reactions + video bubbles), slow dance, call, music, date night |
+| Cinema | `pages/NowShowing.jsx`, `pages/Theatre.jsx`, `components/cinema/` | Posters, tickets, a 3D theatre with an usher and stadium seats, film streamed host → viewer over WebRTC (`services/rtc/filmStream.js`) |
+| Together | `pages/Together.jsx` | Slow dance, call, music, date night |
 | Call | `stores/callStore.js`, `services/rtc/peer.js` | WebRTC with camera/mic/screen share/PiP |
 | Chat | `components/chat/` | Emoji, stickers, photos, voice notes, reactions, receipts, typing |
 | Letters | `pages/Letters.jsx` | Wax-sealed letters that unlock "tomorrow morning" or on your anniversary |

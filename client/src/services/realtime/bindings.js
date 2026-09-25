@@ -26,6 +26,7 @@ import { usePetStore } from '../../stores/petStore';
 import { useMusicStore } from '../../stores/musicStore';
 import { useStoryStore } from '../../stores/storyStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useCinemaStore } from '../../stores/cinemaStore';
 
 const notify = (prefKey, n, sound = 'notification') => {
   const prefs = useSettingsStore.getState().notifications;
@@ -57,6 +58,22 @@ export function bindRealtime() {
         playSfx('success');
       })
       .catch((e) => console.warn('Couldn’t load the new arrival', e));
+  });
+
+  // Cinema
+  on(EV.SHOWING_NEW, ({ showing }) => {
+    if (!isEnabled('movie') || !showing) return;
+    useCinemaStore.getState().receiveShowing(showing);
+    const w = partnerWords();
+    useUiStore.getState().toast(`${w.Subject} put ${showing.title} on the marquee`, { emoji: '🎬' });
+  });
+  on(EV.SHOWING_REMOVED, ({ id }) => useCinemaStore.getState().dropShowing(id));
+  on(EV.TICKET_PARTNER, ({ showingKey, title, seat }) => {
+    if (!isEnabled('movie')) return;
+    useCinemaStore.getState().partnerGotTicket(showingKey, seat);
+    const w = partnerWords();
+    useUiStore.getState().toast(`${w.Subject} got a ticket for ${title} (seat ${seat})`, { emoji: '🎟️' });
+    playSfx('notification');
   });
 
   on(EV.USER_ONLINE, ({ activity }) => {

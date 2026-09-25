@@ -618,7 +618,7 @@ export function buildChibi(config) {
 
   return {
     root,
-    parts: { body, head, armL, armR, eyesOpen, eyesClosed, mouths, loveBlush, defaultMouth: mouths[f.mouth] ? f.mouth : 'smile', happyEyes: f.eyes === 'happy' },
+    parts: { body, head, armL, armR, legs, legScale: hScale, hip: 0.46 * hScale, eyesOpen, eyesClosed, mouths, loveBlush, defaultMouth: mouths[f.mouth] ? f.mouth : 'smile', happyEyes: f.eyes === 'happy' },
     dispose: () => geos.forEach((g) => g.dispose()),
   };
 }

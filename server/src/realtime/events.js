@@ -25,6 +25,13 @@ export const RELAY = new Set([
   'movie:pause',
   'movie:seek',
   'movie:state',
+  // cinema: where each of us is in the theatre, and the film streamed by the host
+  'theatre:state',
+  'stream:offer',
+  'stream:answer',
+  'stream:ice',
+  'stream:request',
+  'stream:stop',
   'movie:reaction',
   'call:reaction',
   'music:play',

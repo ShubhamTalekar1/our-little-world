@@ -26,6 +26,7 @@ import presence from './routes/presence.js';
 import media from './routes/media.js';
 import bootstrap from './routes/bootstrap.js';
 import rtc from './routes/rtc.js';
+import cinema from './routes/cinema.js';
 
 // What the web app is allowed to load. Everything else is blocked.
 const csp = {
@@ -85,6 +86,7 @@ export function createApp() {
   app.use('/api/media', priv, media);
   app.use('/api/rtc', priv, rtc);
   app.use('/api/messages', priv, requireFeature('chat'), messages);
+  app.use('/api/cinema', priv, requireFeature('movie'), cinema);
   // Features that can be locked for now (see ENABLED_FEATURES).
   app.use('/api/wardrobe', priv, requireFeature('wardrobe'), wardrobe);
   app.use('/api/gifts', priv, requireFeature('gifts'), gifts);

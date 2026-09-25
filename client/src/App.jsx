@@ -16,7 +16,8 @@ const Wardrobe = lazy(() => import('./pages/Wardrobe'));
 const Gifts = lazy(() => import('./pages/Gifts'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Together = lazy(() => import('./pages/Together'));
-const MovieNight = lazy(() => import('./pages/MovieNight'));
+const NowShowing = lazy(() => import('./pages/NowShowing'));
+const Theatre = lazy(() => import('./pages/Theatre'));
 const SlowDance = lazy(() => import('./pages/SlowDance'));
 const MusicRoom = lazy(() => import('./pages/MusicRoom'));
 const CallRoom = lazy(() => import('./pages/CallRoom'));
@@ -61,7 +62,8 @@ export default function App() {
             <Route path="gifts" element={<FeatureGate name="gifts"><Gifts /></FeatureGate>} />
             <Route path="chat" element={<FeatureGate name="chat"><Chat /></FeatureGate>} />
             <Route path="together" element={<Together />} />
-            <Route path="together/movie" element={<FeatureGate name="movie"><MovieNight /></FeatureGate>} />
+            <Route path="together/movie" element={<FeatureGate name="movie"><NowShowing /></FeatureGate>} />
+            <Route path="together/movie/:key" element={<FeatureGate name="movie"><Theatre /></FeatureGate>} />
             <Route path="together/dance" element={<FeatureGate name="dance"><SlowDance /></FeatureGate>} />
             <Route path="together/music" element={<FeatureGate name="music"><MusicRoom /></FeatureGate>} />
             <Route path="together/call" element={<FeatureGate name="call"><CallRoom /></FeatureGate>} />

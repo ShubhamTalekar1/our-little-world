@@ -14,6 +14,10 @@ export const POSES = {
   kiss: { l: 12, r: -22, lean: -0.1, tilt: -0.16 },
   heart: { l: 150, r: -150, heartArms: true },
   cheer: { l: 145, r: -145, jump: true },
+  // Cinema: a little walk, and sitting with legs straight out and hands in the lap.
+  walk: { l: 8, r: -8, walk: true },
+  sit: { l: -18, r: 18, fwd: 0.75, sit: true },
+  sitCheer: { l: 145, r: -145, sit: true },
 };
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -37,6 +41,11 @@ export function applyPose(parts, { pose = 'idle', expression = null, t = 0, dt =
     l += s;
     r -= s;
   }
+  if (p.walk && motion) {
+    const s = Math.sin(t * 9) * 22;
+    l += s;
+    r += s;
+  }
   parts.armL.rotation.z = lerp(parts.armL.rotation.z, -l * D, k);
   parts.armR.rotation.z = lerp(parts.armR.rotation.z, -r * D, k);
   const fwd = p.fwd ?? 0;
@@ -46,8 +55,19 @@ export function applyPose(parts, { pose = 'idle', expression = null, t = 0, dt =
   parts.armL.rotation.y = lerp(parts.armL.rotation.y, heartBend, k);
   parts.armR.rotation.y = lerp(parts.armR.rotation.y, -heartBend, k);
 
+  // legs: swing forward to sit (rotating about the hip), straight otherwise
+  if (parts.legs) {
+    const sit = p.sit ? 1 : 0;
+    // Legs pivot at the feet, so rotate them up and move the pivot to the hip.
+    parts.legs.rotation.x = lerp(parts.legs.rotation.x, sit * (-Math.PI / 2), k);
+    parts.legs.position.y = lerp(parts.legs.position.y, sit * parts.hip, k);
+    parts.legs.position.z = lerp(parts.legs.position.z, sit * parts.hip, k);
+    // wobble while walking
+    parts.legs.rotation.z = lerp(parts.legs.rotation.z, p.walk && motion ? Math.sin(t * 9) * 0.08 : 0, k);
+  }
+
   // body
-  const bob = motion ? Math.sin(t * 2.2) * 0.012 : 0;
+  const bob = motion ? (p.walk ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 2.2) * 0.012) : 0;
   const jump = p.jump && motion ? Math.abs(Math.sin(t * 7)) * 0.1 : 0;
   parts.body.position.y = lerp(parts.body.position.y, bob + jump, snap ? 1 : 0.3);
   const sway = p.sway && motion ? Math.sin(t * 1.7) * 0.06 : 0;

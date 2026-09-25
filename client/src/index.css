@@ -246,3 +246,16 @@ html[data-reduced-motion='true'] *::after {
 .sticker-wobble { animation: sticker-wobble 1.6s ease-in-out infinite; }
 .sticker-float { animation: sticker-float 2.6s ease-in-out infinite; }
 .sticker-spin { animation: sticker-spin 2s ease-in-out infinite; }
+
+/* Cinema marquee bulbs */
+.marquee-bulb {
+  box-shadow: 0 0 6px 1px rgb(242 201 139 / 0.8);
+  animation: bulb 1s steps(1, end) infinite;
+}
+@keyframes bulb {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+[data-reduced-motion='true'] .marquee-bulb {
+  animation: none;
+}
