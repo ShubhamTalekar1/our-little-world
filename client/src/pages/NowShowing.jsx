@@ -141,16 +141,18 @@ function AddFilm({ open, onClose }) {
           </div>
           <fieldset>
             <legend className="eyebrow mb-1.5 block">How we’ll watch it</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2">
               {[
                 { kind: 'stream', icon: MonitorPlay, title: 'I’ll stream it', note: `From a file on your computer. ${w.Subject} ${w.v('sees', 'see')} exactly what you play.` },
                 { kind: 'youtube', icon: TvMinimalPlay, title: 'YouTube', note: 'Both play the same video, kept in sync.' },
                 { kind: 'link', icon: Link2, title: 'Video link', note: 'A direct https://… .mp4 link.' },
               ].map((o) => (
-                <button key={o.kind} type="button" onClick={() => setForm((f) => ({ ...f, kind: o.kind }))} aria-pressed={form.kind === o.kind} className={cn('rounded-2xl border p-3 text-left transition', form.kind === o.kind ? 'border-peach/70 bg-peach/10' : 'border-line hover:border-line-strong')}>
-                  <o.icon className="h-5 w-5 text-peach" aria-hidden />
-                  <p className="mt-1.5 text-sm text-cream">{o.title}</p>
-                  <p className="mt-0.5 text-xs text-muted">{o.note}</p>
+                <button key={o.kind} type="button" onClick={() => setForm((f) => ({ ...f, kind: o.kind }))} aria-pressed={form.kind === o.kind} className={cn('flex items-start gap-3 rounded-2xl border px-3 py-2.5 text-left transition', form.kind === o.kind ? 'border-peach/70 bg-peach/10' : 'border-line hover:border-line-strong')}>
+                  <o.icon className="mt-0.5 h-5 w-5 shrink-0 text-peach" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-cream">{o.title}</span>
+                    <span className="block text-xs text-muted">{o.note}</span>
+                  </span>
                 </button>
               ))}
             </div>

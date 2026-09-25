@@ -126,6 +126,7 @@ How the film gets to her:
 
 - **"I'll stream it" (recommended):** in your seat, choose the file on your computer. It streams live from your browser to hers over WebRTC, picture and sound, so she needs nothing and it's always in sync. Only you control play and pause; her buttons ask you. Use Chrome or Edge on a laptop to stream (Safari can't capture video); she can watch on anything, including a phone. Keep the theatre open while you stream, because leaving the page stops the film.
 - **YouTube / video link:** both of you play the same video, and play, pause and seeking stay in sync. Whoever arrives second catches up automatically.
+- **Audio & subtitles (the CC button in your seat):** subtitles can come from inside an MKV file (text tracks) or from a separate .srt, .vtt or .ass file. Whoever turns them on, they show on both screens, and each of you can hide them on your own. The menu lists all of an MKV's audio tracks. Safari can switch between them as-is; Chrome and Edge only play the default track unless "Experimental Web Platform features" is turned on in chrome://flags. Picture-based subtitles (PGS/VobSub) can't be shown; use an .srt instead.
 - If your networks are strict (some mobile carriers, office wifi) and the stream never connects, add a TURN server (`TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL`).
 
 ---

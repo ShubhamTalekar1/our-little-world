@@ -1,8 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Expand, Film, Maximize2, Minimize2, MessageCircle, Pause, Play, Ticket, X } from 'lucide-react';
+import { ArrowLeft, Captions, Expand, Film, Maximize2, Minimize2, MessageCircle, Pause, Play, Ticket, X } from 'lucide-react';
 import TicketCard from '../components/cinema/TicketCard';
+import TrackMenu from '../components/cinema/TrackMenu';
+import { useFilmTracks } from '../components/cinema/useFilmTracks';
 import MoviePlayer from '../components/activities/MoviePlayer';
 import ChatPanel from '../components/chat/ChatPanel';
 import { useReactions, ReactionBurst } from '../components/activities/VideoCall';
@@ -267,6 +269,11 @@ export default function Theatre() {
     }
   };
 
+  // ---- audio tracks & subtitles ---------------------------------------------------
+  const getVideo = useCallback(() => (mode === 'host' ? hostVideo.current : mode === 'html5' ? (player.current?.element?.() ?? null) : null), [mode]);
+  const tracks = useFilmTracks({ filmKey: key, getVideo });
+  const [trackMenu, setTrackMenu] = useState(false);
+
   // ---- ticket check ------------------------------------------------------------
   const [bubble, setBubble] = useState('');
   const [torn, setTorn] = useState(false);
@@ -353,8 +360,7 @@ export default function Theatre() {
   const frame = useRef(null);
   const fullScreen = () => {
     const v = mode === 'host' ? hostVideo.current : mode === 'viewer' ? viewerVideo.current : null;
-    const el = v ?? frame.current;
-    if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
+    if (frame.current?.requestFullscreen) frame.current.requestFullscreen().catch(() => {});
     else if (v?.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone
   };
 
@@ -456,7 +462,11 @@ export default function Theatre() {
           the screen, and shows through a see-through window in it. Enlarged, it
           comes to the front at full size. */}
       <div className={cn('absolute inset-0 overflow-hidden', fullLayout ? 'z-20 flex items-center justify-center bg-black' : 'pointer-events-none z-0')} aria-hidden={!fullLayout}>
-        <div ref={frame} className={fullLayout ? 'relative aspect-video max-h-full w-full' : 'absolute left-0 top-0 origin-top-left'} style={fullLayout ? undefined : { width: 1280, height: 720, visibility: 'hidden' }}>
+        <div
+          ref={frame}
+          className={cn('bg-black [container-type:size]', fullLayout ? 'relative aspect-video max-h-full w-full' : 'absolute left-0 top-0 origin-top-left')}
+          style={fullLayout ? undefined : { width: 1280, height: 720, visibility: 'hidden' }}
+        >
           {mode === 'host' && (
             <video
               ref={hostVideo}
@@ -464,6 +474,7 @@ export default function Theatre() {
               playsInline
               controls={fullLayout}
               className="h-full w-full bg-black object-contain"
+              onLoadedMetadata={tracks.refreshAudio}
               onLoadedData={(e) => {
                 try {
                   host.current?.share(e.currentTarget);
@@ -506,6 +517,7 @@ export default function Theatre() {
                     }
               }
               onReady={() => {
+                tracks.refreshAudio();
                 setLoadError(null);
                 const p = pending.current;
                 if (p) {
@@ -527,6 +539,14 @@ export default function Theatre() {
               onError={(m) => setLoadError(m)}
               onBlocked={() => setBlocked(true)}
             />
+          )}
+          {/* subtitles: part of the picture, so they ride along onto the 3D screen and into full screen */}
+          {tracks.showSubs && tracks.subText && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-[7%] z-10 flex justify-center px-[8%]" aria-live="polite">
+              <p className="whitespace-pre-line rounded-lg bg-black/55 px-[0.6em] py-[0.15em] text-center font-medium leading-snug text-white" style={{ fontSize: 'clamp(13px, 4.2cqh, 44px)', textShadow: '0 1px 3px #000' }}>
+                {tracks.subText}
+              </p>
+            </div>
           )}
           {loadError && seated && fullLayout && (
             <div className="absolute inset-0 grid place-items-center bg-ink/85 p-6 text-center">
@@ -550,6 +570,7 @@ export default function Theatre() {
           if (!f) return;
           setLoadError(null);
           setFileName(f.name);
+          tracks.setFile(f);
           setFileUrl(URL.createObjectURL(f));
           toast('Film loaded. Press play when you’re both seated', {
             emoji: '🎞️',
@@ -635,19 +656,19 @@ export default function Theatre() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
-            className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 pt-16"
+            className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 pt-10 sm:p-4"
           >
-            <div className="mx-auto max-w-md">
+            <div className="mx-auto max-w-[19rem] sm:max-w-xs">
               {ticket ? (
                 <>
-                  <TicketCard ticket={ticket} holder={me?.name} torn={torn} />
+                  <TicketCard ticket={ticket} holder={me?.name} torn={torn} compact />
                   {stage === 'lobby' && (
-                    <Button variant="primary" size="lg" icon={Ticket} className="mt-4 w-full" onClick={handOver} data-autofocus>
+                    <Button variant="primary" size="md" icon={Ticket} className="mt-3 w-full" onClick={handOver} data-autofocus>
                       Hand over my ticket
                     </Button>
                   )}
                   {stage === 'checking' && torn && (
-                    <Button variant="primary" size="lg" className="mt-4 w-full" onClick={() => setStage('walking')}>
+                    <Button variant="primary" size="md" className="mt-3 w-full" onClick={() => setStage('walking')}>
                       Find my seat
                     </Button>
                   )}
@@ -699,6 +720,12 @@ export default function Theatre() {
                   {e}
                 </motion.button>
               ))}
+              <div className="relative">
+                <button type="button" onClick={() => setTrackMenu((v) => !v)} aria-expanded={trackMenu} aria-haspopup="menu" className={cn('grid h-10 w-10 place-items-center rounded-full ring-1 ring-white/10 hover:bg-black/60', tracks.subText || tracks.subs ? 'bg-peach/25 text-peach' : 'bg-black/40 text-cream')} aria-label="Audio and subtitles">
+                  <Captions className="h-4 w-4" />
+                </button>
+                <AnimatePresence>{trackMenu && <TrackMenu role={mode === 'host' ? 'host' : mode === 'viewer' ? 'viewer' : mode === 'youtube' ? 'youtube' : 'sync'} tracks={tracks} hostName={w.Subject} onClose={() => setTrackMenu(false)} />}</AnimatePresence>
+              </div>
               {enlarged && (
                 <button type="button" onClick={fullScreen} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-cream ring-1 ring-white/10 hover:bg-black/60" aria-label="Full screen">
                   <Expand className="h-4 w-4" />

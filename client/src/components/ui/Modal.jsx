@@ -53,7 +53,7 @@ export default function Modal({ open, onClose, title, children, className, hideC
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 30, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-            className={cn('glass relative max-h-[92dvh] w-full overflow-y-auto rounded-t-4xl p-6 shadow-soft sm:max-w-lg sm:rounded-4xl', className)}
+            className={cn('glass relative max-h-[92dvh] w-full overflow-y-auto rounded-t-4xl p-6 shadow-soft sm:rounded-4xl', /sm:max-w-/.test(className ?? '') ? null : 'sm:max-w-lg', className)}
           >
             {!hideClose && (
               <button onClick={onClose} className="absolute right-4 top-4 rounded-full p-2 text-muted transition hover:bg-surface-3 hover:text-cream" aria-label="Close">

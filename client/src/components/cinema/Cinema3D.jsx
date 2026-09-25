@@ -259,6 +259,10 @@ function ScreenTracker({ frameRef, active }) {
   return null;
 }
 
+// Each curtain half is a row of overlapping pleats, wide enough to cover half the screen.
+const CURTAIN_HALF = SCREEN.w / 4 + 0.35;
+const PLEATS = Array.from({ length: 12 }, (_, j) => -CURTAIN_HALF + 0.25 + j * ((CURTAIN_HALF * 2 - 0.5) / 11));
+
 function Screen({ showFilm, poster, title, playing, curtainsOpen }) {
   const light = useRef();
   const left = useRef();
@@ -271,10 +275,21 @@ function Screen({ showFilm, poster, title, playing, curtainsOpen }) {
       const target = playing ? 7 + Math.sin(t * 3.1) * 0.9 + Math.sin(t * 7.3) * 0.5 : 2.5;
       light.current.intensity += (target - light.current.intensity) * Math.min(1, dt * 3);
     }
-    const k = Math.min(1, dt * 1.4);
+    // Closed: two pleated halves meet in the middle. Open: each gathers up
+    // (narrower) at its side of the screen.
+    const k = Math.min(1, dt * 0.9);
     const open = curtainsOpen ? 1 : 0;
-    if (left.current) left.current.position.x += (-(2.6 + open * 5.1) - left.current.position.x) * k;
-    if (right.current) right.current.position.x += (2.6 + open * 5.1 - right.current.position.x) * k;
+    const bunch = 1 - open * 0.55;
+    const x = CURTAIN_HALF * bunch + open * (SCREEN.w / 2 + 0.15);
+    for (const [ref, side] of [
+      [left, -1],
+      [right, 1],
+    ]) {
+      const g = ref.current;
+      if (!g) continue;
+      g.position.x += (side * x - g.position.x) * k;
+      g.scale.x += (bunch - g.scale.x) * k;
+    }
   });
   return (
     <group>
@@ -295,10 +310,10 @@ function Screen({ showFilm, poster, title, playing, curtainsOpen }) {
       <pointLight ref={light} position={[0, 3.2, -4.5]} color="#b9cdf0" intensity={2.5} distance={22} decay={1.2} />
       {/* curtains */}
       {[left, right].map((ref, i) => (
-        <group key={i} ref={ref} position={[i ? 2.6 : -2.6, SCREEN.y + 0.4, SCREEN.z + 0.35]}>
-          {[-2, -1, 0, 1, 2].map((dx) => (
-            <mesh key={dx} position={[dx * 0.5, 0, 0]} scale={[0.3, 1, 0.2]} material={mat(dx % 2 ? VELVET_DARK : VELVET)}>
-              <cylinderGeometry args={[1, 1.12, 7.4, 14]} />
+        <group key={i} ref={ref} position={[i ? CURTAIN_HALF : -CURTAIN_HALF, SCREEN.y + 0.35, SCREEN.z + 0.35]}>
+          {PLEATS.map((dx, j) => (
+            <mesh key={j} position={[dx, 0, (j % 2) * 0.08]} scale={[0.3, 1, 0.22]} material={mat(j % 2 ? VELVET_DARK : VELVET)}>
+              <cylinderGeometry args={[1, 1.12, 7.5, 14]} />
             </mesh>
           ))}
         </group>
@@ -442,15 +457,22 @@ function Person({ config, pose, expression, target, facing, path, onArrive, visi
   const built = useMemo(() => buildChibi(config), [key]);
   useEffect(() => () => built.dispose(), [built]);
   const group = useRef();
-  const walk = useRef(null); // { points, i }
+  const walk = useRef(null); // { curve, length, d }
   const arrived = useRef(onArrive);
   arrived.current = onArrive;
 
+  // One smooth curve through the waypoints (no sharp corners), walked at a
+  // steady pace that eases in and out.
   useEffect(() => {
     if (!path) return;
-    walk.current = { points: path, i: 1 };
-    if (group.current) group.current.position.copy(path[0]);
-  }, [path]);
+    const curve = new THREE.CatmullRomCurve3(path, false, 'centripetal', 0.5);
+    walk.current = { curve, length: curve.getLength(), d: 0 };
+    if (group.current) {
+      group.current.position.copy(path[0]);
+      curve.getTangentAt(0, tmp);
+      group.current.rotation.y = Math.atan2(tmp.x, tmp.z);
+    }
+  }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (group.current && target && !path) {
       group.current.position.set(...target);
@@ -460,6 +482,9 @@ function Person({ config, pose, expression, target, facing, path, onArrive, visi
   }, [built]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tmp = useMemo(() => new THREE.Vector3(), []);
+  const turn = (g, yaw, rate) => {
+    g.rotation.y += Math.atan2(Math.sin(yaw - g.rotation.y), Math.cos(yaw - g.rotation.y)) * Math.min(1, rate);
+  };
   useFrame((state, dt) => {
     const g = group.current;
     if (!g) return;
@@ -467,33 +492,27 @@ function Person({ config, pose, expression, target, facing, path, onArrive, visi
     const d = Math.min(dt, 0.1);
     const stepDt = Math.min(dt, 0.5);
     let walking = false;
-    if (walk.current) {
-      const { points } = walk.current;
-      const next = points[walk.current.i];
-      tmp.copy(next).sub(g.position);
-      const dist = tmp.length();
-      const step = 2.1 * stepDt;
-      if (dist <= step) {
-        g.position.copy(next);
-        walk.current.i += 1;
-        if (walk.current.i >= points.length) {
-          walk.current = null;
-          arrived.current?.();
-        }
-      } else {
-        g.position.addScaledVector(tmp.normalize(), step);
-        walking = true;
-        const yaw = Math.atan2(tmp.x, tmp.z);
-        g.rotation.y += (Math.atan2(Math.sin(yaw - g.rotation.y), Math.cos(yaw - g.rotation.y))) * Math.min(1, d * 10);
+    const w = walk.current;
+    if (w) {
+      const remain = w.length - w.d;
+      const pace = 1.9 * Math.min(1, 0.3 + w.d / 1.4, 0.25 + remain / 1.8);
+      w.d = Math.min(w.length, w.d + pace * stepDt);
+      const u = w.length ? w.d / w.length : 1;
+      w.curve.getPointAt(u, g.position);
+      w.curve.getTangentAt(u, tmp);
+      turn(g, Math.atan2(tmp.x, tmp.z), d * 7);
+      walking = remain > 0.05;
+      if (w.d >= w.length) {
+        walk.current = null;
+        arrived.current?.();
       }
     } else if (target) {
       tmp.set(...target);
-      easeTo(g.position, tmp, Math.min(1, d * 4));
-      const yaw = facing ?? 0;
-      g.rotation.y += Math.atan2(Math.sin(yaw - g.rotation.y), Math.cos(yaw - g.rotation.y)) * Math.min(1, d * 5);
+      easeTo(g.position, tmp, Math.min(1, d * 3));
+      turn(g, facing ?? 0, d * 3.2);
     }
     // Seated: drop the hips onto the cushion.
-    built.root.position.y += ((sitting && !walking ? 0.52 - built.parts.hip + 0.02 : 0) - built.root.position.y) * Math.min(1, d * 6);
+    built.root.position.y += ((sitting && !walking ? 0.52 - built.parts.hip + 0.02 : 0) - built.root.position.y) * Math.min(1, d * 3.5);
     applyPose(built.parts, { pose: walking ? 'walk' : pose, expression, t: state.clock.elapsedTime, dt: d, motion });
   });
   return (
@@ -510,7 +529,7 @@ const SHOTS = {
   screen: { pos: [0, SCREEN.y, -1.6], look: [SCREEN.x, SCREEN.y, SCREEN.z] },
 };
 
-function CameraRig({ view, follow, motion }) {
+function CameraRig({ view, follow, watch, watching, motion }) {
   const { camera, size, pointer } = useThree();
   const look = useRef(new THREE.Vector3(...SHOTS.lobby.look));
   const pos = useMemo(() => new THREE.Vector3(), []);
@@ -532,11 +551,16 @@ function CameraRig({ view, follow, motion }) {
         pos.set(...SHOTS.lobby.pos);
         at.set(p.x, p.y + 1.1, p.z);
       } else {
-        // inside: a high shot from the back corner, following them down the steps
         // inside: from down by the screen, watching them come down the steps
         pos.set(-5.2, 7.6, -6.2);
         at.set(p.x * 0.6, p.y + 0.6, p.z);
       }
+    } else if (view === 'seats' && watching && watch.current?.children?.[0]) {
+      // They're coming in: turn round from the front and watch them find their seat.
+      const p = watch.current.children[0].position;
+      pos.set(-1.2, 5.2, -2.6);
+      if (p.z > 8.4) at.set(AISLE_X, LOBBY_Y + 1.4, 8.6); // at the door
+      else at.set(p.x, p.y + 1.0, p.z);
     } else {
       const shot = SHOTS[view] ?? SHOTS.seats;
       pos.set(...shot.pos);
@@ -546,7 +570,7 @@ function CameraRig({ view, follow, motion }) {
         pos.y += pointer.y * 0.12;
       }
     }
-    const k = 1 - Math.pow(view === 'screen' ? 0.12 : 0.2, d);
+    const k = 1 - Math.pow(view === 'screen' ? 0.12 : 0.3, d);
     camera.position.lerp(pos, k);
     look.current.lerp(at, k);
     camera.lookAt(look.current);
@@ -598,6 +622,7 @@ export default function Cinema3D({ view, me, partner, usherPose = 'idle', showFi
   const myPath = useMemo(() => (me.stage === 'walking' ? pathTo(me.seat, QUEUE.me) : null), [me.stage, me.seat]);
   const theirPath = useMemo(() => (partner.stage === 'walking' ? pathTo(partner.seat, QUEUE.partner) : null), [partner.stage, partner.seat]);
   const follow = useRef(null);
+  const watchRef = useRef(null);
   const seatedMe = ['seated', 'screen'].includes(me.stage);
   const seatedThem = ['seated', 'screen'].includes(partner.stage);
 
@@ -613,7 +638,7 @@ export default function Cinema3D({ view, me, partner, usherPose = 'idle', showFi
       <fog attach="fog" args={['#07050a', 18, 42]} />
       <HouseLights level={playing ? 0 : 1} />
       <directionalLight position={[3, 8, 6]} intensity={0.5} color="#ffe6cc" />
-      <CameraRig view={view} follow={follow} motion={motion} />
+      <CameraRig view={view} follow={follow} watch={watchRef} watching={partner.stage === 'walking' && ['seated', 'screen'].includes(me.stage)} motion={motion} />
       <Auditorium houseLights={playing ? 0 : 1} />
       <Screen showFilm={showFilm} poster={poster} title={title} playing={playing} curtainsOpen={curtainsOpen} />
       <Lobby posters={posters} />
@@ -622,7 +647,6 @@ export default function Cinema3D({ view, me, partner, usherPose = 'idle', showFi
 
       <group ref={follow}>
         <Person
-          key={`me-${myPath ? 'walk' : 'still'}`}
           config={me.config}
           pose={seatedMe ? (me.cheer ? 'sitCheer' : 'sit') : me.pose ?? 'idle'}
           expression={me.expression}
@@ -635,18 +659,19 @@ export default function Cinema3D({ view, me, partner, usherPose = 'idle', showFi
         />
       </group>
       {partner.config && (
+        <group ref={watchRef}>
         <Person
-          key={`them-${theirPath ? 'walk' : 'still'}`}
           config={partner.config}
           pose={seatedThem ? (partner.cheer ? 'sitCheer' : 'sit') : 'idle'}
           expression={partner.expression}
           path={theirPath}
-          target={seatedThem ? [theirs.x, theirs.y, theirs.z] : QUEUE.partner}
-          facing={seatedThem ? Math.PI : -Math.PI / 2}
-          sitting={seatedThem}
+          target={seatedThem || partner.stage === 'walking' ? [theirs.x, theirs.y, theirs.z] : QUEUE.partner}
+          facing={seatedThem || partner.stage === 'walking' ? Math.PI : -Math.PI / 2}
+          sitting={seatedThem || partner.stage === 'walking'}
           visible={partner.stage !== 'away'}
           motion={motion}
         />
+        </group>
       )}
     </Canvas>
   );

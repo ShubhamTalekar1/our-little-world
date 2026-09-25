@@ -19,6 +19,7 @@ export const EV = {
   MOVIE_PAUSE: 'movie:pause',
   MOVIE_SEEK: 'movie:seek',
   MOVIE_STATE: 'movie:state',
+  MOVIE_CUE: 'movie:cue',
   THEATRE_STATE: 'theatre:state',
   STREAM_OFFER: 'stream:offer',
   STREAM_ANSWER: 'stream:answer',
