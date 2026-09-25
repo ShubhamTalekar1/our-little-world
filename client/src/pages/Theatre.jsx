@@ -32,21 +32,6 @@ const Cinema3D = lazy(() => import('../components/cinema/Cinema3D'));
 
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-/** Can WebGL read this video's pixels? (Cross-origin films without CORS can't be drawn.) */
-function readable(video) {
-  try {
-    const c = document.createElement('canvas');
-    c.width = 2;
-    c.height = 2;
-    const g = c.getContext('2d');
-    g.drawImage(video, 0, 0, 2, 2);
-    g.getImageData(0, 0, 1, 1);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function useFilm(key) {
   const showings = useCinemaStore((s) => s.showings);
   return useMemo(() => {
@@ -94,7 +79,11 @@ export default function Theatre() {
     realtime.emit(EV.THEATRE_STATE, { key, stage: stageName });
   }, [key, stageName]);
   useEffect(() => {
-    realtime.emit(EV.THEATRE_STATE, { key, stage: stageRef.current, hello: true });
+    realtime.emit(EV.THEATRE_STATE, {
+      key,
+      stage: stageRef.current,
+      hello: true,
+    });
     const off = realtime.on(EV.THEATRE_STATE, ({ key: k, stage: s, hello }) => {
       if (k !== key) {
         if (s !== 'away') setTheirStage('away');
@@ -117,7 +106,8 @@ export default function Theatre() {
   // ---- who plays the film --------------------------------------------------------
   const mode = !film ? null : film.kind === 'stream' ? (film.hostId === me?.id ? 'host' : 'viewer') : film.kind === 'youtube' ? 'youtube' : 'html5';
   const [playing, setPlaying] = useState(false);
-  const [screenVideo, setScreenVideo] = useState(null); // element shown on the 3D screen
+  const [started, setStarted] = useState(false); // the film has begun (screen shows it)
+  const [fullLayout, setFullLayout] = useState(false); // enlarged: player on top, unwarped
   const [blocked, setBlocked] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const counted = useRef(false);
@@ -170,8 +160,7 @@ export default function Theatre() {
       v.play()
         .then(() => setBlocked(false))
         .catch((e) => e?.name === 'NotAllowedError' && setBlocked(true));
-      setScreenVideo(v);
-    } else setScreenVideo(null);
+    }
   }, [remote]);
 
   // Synced players (YouTube / web links).
@@ -201,7 +190,9 @@ export default function Theatre() {
           player.current?.seek(position);
           setPlaying(false);
         }
-        toast(`${w.Subject} paused${position ? ` at ${fmt(position)}` : ''}`, { emoji: '⏸️' });
+        toast(`${w.Subject} paused${position ? ` at ${fmt(position)}` : ''}`, {
+          emoji: '⏸️',
+        });
       }),
       realtime.on(EV.MOVIE_SEEK, ({ key: k, position }) => {
         if (k !== key || mode === 'host' || mode === 'viewer') return;
@@ -216,7 +207,9 @@ export default function Theatre() {
           player.current.play();
         } else pending.current = { position, playing: p };
         setPlaying(true);
-        toast(`Catching up with ${w.them} at ${fmt(position)}`, { emoji: '🎬' });
+        toast(`Catching up with ${w.them} at ${fmt(position)}`, {
+          emoji: '🎬',
+        });
       }),
     ];
     return () => offs.forEach((o) => o());
@@ -227,10 +220,19 @@ export default function Theatre() {
     if (theirStage === 'away') return;
     if (mode === 'host') {
       const v = hostVideo.current;
-      realtime.emit(EV.MOVIE_STATE, { key, position: v?.currentTime ?? 0, playing: v ? !v.paused : false });
+      realtime.emit(EV.MOVIE_STATE, {
+        key,
+        position: v?.currentTime ?? 0,
+        playing: v ? !v.paused : false,
+      });
     } else if (mode === 'youtube' || mode === 'html5') {
       const p = player.current;
-      if (p && !p.paused()) realtime.emit(EV.MOVIE_STATE, { key, position: p.time(), playing: true });
+      if (p && !p.paused())
+        realtime.emit(EV.MOVIE_STATE, {
+          key,
+          position: p.time(),
+          playing: true,
+        });
     }
   }, [theirStage === 'away', mode, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -243,12 +245,25 @@ export default function Theatre() {
     } else if (mode === 'viewer') {
       // Ask the host: the film lives on their computer.
       realtime.emit(playing ? EV.MOVIE_PAUSE : EV.MOVIE_PLAY, { key });
-      toast(playing ? `Asked ${w.them} to pause` : `Asked ${w.them} to play`, { emoji: playing ? '⏸️' : '▶️' });
+      toast(playing ? `Asked ${w.them} to pause` : `Asked ${w.them} to play`, {
+        emoji: playing ? '⏸️' : '▶️',
+      });
     } else {
+      // The player treats calls made through its API as remote (no echo), so
+      // announce this press ourselves.
       const p = player.current;
       if (!p) return;
-      if (p.paused()) p.play();
-      else p.pause();
+      const position = p.time();
+      if (p.paused()) {
+        p.play();
+        setPlaying(true);
+        countFirstPlay();
+        realtime.emit(EV.MOVIE_PLAY, { key, position });
+      } else {
+        p.pause();
+        setPlaying(false);
+        realtime.emit(EV.MOVIE_PAUSE, { key, position });
+      }
     }
   };
 
@@ -319,6 +334,22 @@ export default function Theatre() {
   }, [film, films]);
 
   const [chatOpen, setChatOpen] = useState(false);
+  useEffect(() => {
+    if (playing) setStarted(true);
+  }, [playing]);
+  // Enlarging: the camera flies to the screen first (the film rides along on it),
+  // then the player takes over the whole view.
+  useEffect(() => {
+    if (!enlarged) return setFullLayout(false);
+    const t = setTimeout(() => setFullLayout(true), 950);
+    return () => clearTimeout(t);
+  }, [enlarged]);
+  useEffect(() => {
+    if (fullLayout && frame.current) {
+      frame.current.style.transform = '';
+      frame.current.style.visibility = 'visible';
+    }
+  }, [fullLayout]);
   const frame = useRef(null);
   const fullScreen = () => {
     const v = mode === 'host' ? hostVideo.current : mode === 'viewer' ? viewerVideo.current : null;
@@ -345,6 +376,7 @@ export default function Theatre() {
   const view = stage === 'walking' ? 'walk' : seated ? (enlarged ? 'screen' : 'seats') : 'lobby';
   const theyAreHere = ['seated', 'screen', 'walking', 'lobby', 'checking'].includes(theirStage);
   const filmReady = mode === 'host' ? !!fileUrl : mode === 'viewer' ? !!remote : true;
+  const showFilm = seated && filmReady && !loadError && (mode === 'viewer' ? !!remote : started);
   const status =
     mode === 'host'
       ? fileUrl
@@ -371,26 +403,41 @@ export default function Theatre() {
     <div className="relative -mx-3 h-[calc(100dvh-15rem)] min-h-[440px] overflow-hidden rounded-2xl bg-black sm:mx-0 sm:rounded-3xl lg:h-[calc(100dvh-7.5rem)]">
       {/* 3D cinema */}
       {hasWebGL() ? (
-        <Suspense fallback={<div className="grid h-full place-items-center text-muted">Opening the doors…</div>}>
-          <Cinema3D
-            view={view}
-            me={{ config: myConfig, seat: ticket?.seat ?? 'F7', stage: stage === 'walking' ? 'walking' : seated ? 'seated' : 'lobby', cheer: cheer.me, pose: stage === 'checking' ? 'wave' : 'idle' }}
-            partner={{ config: partner ? theirConfig : null, seat: partnerSeat, stage: theirStage === 'screen' ? 'seated' : theirStage === 'checking' ? 'lobby' : theirStage, cheer: cheer.them }}
-            usherPose={stage === 'checking' && torn ? 'wave' : 'idle'}
-            screenVideo={filmReady ? screenVideo : null}
-            poster={posterCanvas}
-            posters={lobbyPosters}
-            title={film.title}
-            playing={seated && playing}
-            curtainsOpen={seated && (filmReady || playing)}
-            bubbleRef={bubbleRef}
-            onArrive={() => {
-              setStage('seated');
-              playSfx('tap');
-            }}
-            motion={motionOn}
-          />
-        </Suspense>
+        <div className="absolute inset-0 z-10">
+          <Suspense fallback={<div className="grid h-full place-items-center text-muted">Opening the doors…</div>}>
+            <Cinema3D
+              view={view}
+              me={{
+                config: myConfig,
+                seat: ticket?.seat ?? 'F7',
+                stage: stage === 'walking' ? 'walking' : seated ? 'seated' : 'lobby',
+                cheer: cheer.me,
+                pose: stage === 'checking' ? 'wave' : 'idle',
+              }}
+              partner={{
+                config: partner ? theirConfig : null,
+                seat: partnerSeat,
+                stage: theirStage === 'screen' ? 'seated' : theirStage === 'checking' ? 'lobby' : theirStage,
+                cheer: cheer.them,
+              }}
+              usherPose={stage === 'checking' && torn ? 'wave' : 'idle'}
+              showFilm={showFilm}
+              frameRef={frame}
+              trackFrame={!fullLayout}
+              poster={posterCanvas}
+              posters={lobbyPosters}
+              title={film.title}
+              playing={seated && playing}
+              curtainsOpen={seated && (filmReady || playing)}
+              bubbleRef={bubbleRef}
+              onArrive={() => {
+                setStage('seated');
+                playSfx('tap');
+              }}
+              motion={motionOn}
+            />
+          </Suspense>
+        </div>
       ) : (
         <div className="grid h-full place-items-center bg-[radial-gradient(ellipse_at_center,#2a1a22,#07050a)] text-muted">Screen 1</div>
       )}
@@ -405,24 +452,19 @@ export default function Theatre() {
         </div>
       )}
 
-      {/* the film itself: invisible in theatre view (it feeds the 3D screen), full when enlarged */}
-      <motion.div
-        className={cn('absolute inset-0 z-20 flex items-center justify-center bg-black', !(seated && enlarged) && 'pointer-events-none')}
-        initial={false}
-        animate={{ opacity: seated && enlarged ? 1 : 0 }}
-        transition={{ duration: 0.5, delay: seated && enlarged ? 0.75 : 0 }}
-        aria-hidden={!(seated && enlarged)}
-      >
-        <div ref={frame} className="relative aspect-video max-h-full w-full">
+      {/* The film itself. In theatre view it sits behind the 3D scene, warped onto
+          the screen, and shows through a see-through window in it. Enlarged, it
+          comes to the front at full size. */}
+      <div className={cn('absolute inset-0 overflow-hidden', fullLayout ? 'z-20 flex items-center justify-center bg-black' : 'pointer-events-none z-0')} aria-hidden={!fullLayout}>
+        <div ref={frame} className={fullLayout ? 'relative aspect-video max-h-full w-full' : 'absolute left-0 top-0 origin-top-left'} style={fullLayout ? undefined : { width: 1280, height: 720, visibility: 'hidden' }}>
           {mode === 'host' && (
             <video
               ref={hostVideo}
               src={fileUrl ?? undefined}
               playsInline
-              controls={enlarged}
+              controls={fullLayout}
               className="h-full w-full bg-black object-contain"
               onLoadedData={(e) => {
-                setScreenVideo(e.currentTarget);
                 try {
                   host.current?.share(e.currentTarget);
                 } catch (err) {
@@ -432,11 +474,17 @@ export default function Theatre() {
               onPlay={(e) => {
                 setPlaying(true);
                 countFirstPlay();
-                realtime.emit(EV.MOVIE_PLAY, { key, position: e.currentTarget.currentTime });
+                realtime.emit(EV.MOVIE_PLAY, {
+                  key,
+                  position: e.currentTarget.currentTime,
+                });
               }}
               onPause={(e) => {
                 setPlaying(false);
-                realtime.emit(EV.MOVIE_PAUSE, { key, position: e.currentTarget.currentTime });
+                realtime.emit(EV.MOVIE_PAUSE, {
+                  key,
+                  position: e.currentTarget.currentTime,
+                });
               }}
               onError={() => setLoadError('This file can’t be played in the browser. MP4 (H.264) or WebM work best.')}
               aria-label={film.title}
@@ -446,11 +494,19 @@ export default function Theatre() {
           {(mode === 'youtube' || mode === 'html5') && (
             <MoviePlayer
               ref={player}
-              source={mode === 'youtube' ? { kind: 'youtube', videoId: film.source, title: film.title } : { kind: 'html5', id: film.key, src: film.src ?? film.source, title: film.title }}
+              controls={fullLayout}
+              source={
+                mode === 'youtube'
+                  ? { kind: 'youtube', videoId: film.source, title: film.title }
+                  : {
+                      kind: 'html5',
+                      id: film.key,
+                      src: film.src ?? film.source,
+                      title: film.title,
+                    }
+              }
               onReady={() => {
                 setLoadError(null);
-                const el = player.current?.element?.();
-                if (el) el.addEventListener('playing', () => readable(el) && setScreenVideo(el), { once: true });
                 const p = pending.current;
                 if (p) {
                   pending.current = null;
@@ -472,7 +528,7 @@ export default function Theatre() {
               onBlocked={() => setBlocked(true)}
             />
           )}
-          {loadError && seated && enlarged && (
+          {loadError && seated && fullLayout && (
             <div className="absolute inset-0 grid place-items-center bg-ink/85 p-6 text-center">
               <div>
                 <p className="text-3xl" aria-hidden>
@@ -483,7 +539,7 @@ export default function Theatre() {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
       <input
         ref={fileInput}
         type="file"
@@ -495,7 +551,9 @@ export default function Theatre() {
           setLoadError(null);
           setFileName(f.name);
           setFileUrl(URL.createObjectURL(f));
-          toast('Film loaded. Press play when you’re both seated', { emoji: '🎞️' });
+          toast('Film loaded. Press play when you’re both seated', {
+            emoji: '🎞️',
+          });
         }}
       />
 
@@ -519,7 +577,12 @@ export default function Theatre() {
       {/* top bar */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent p-3 sm:p-4">
         <div className="pointer-events-auto flex min-w-0 items-start gap-2">
-          <button type="button" onClick={() => navigate('/together/movie')} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/40 text-cream ring-1 ring-white/10 hover:bg-black/60" aria-label="Back to Now Showing">
+          <button
+            type="button"
+            onClick={() => navigate('/together/movie')}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/40 text-cream ring-1 ring-white/10 hover:bg-black/60"
+            aria-label="Back to Now Showing"
+          >
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="min-w-0">
@@ -530,11 +593,26 @@ export default function Theatre() {
         </div>
         <div className="pointer-events-auto flex shrink-0 gap-2">
           {!theyAreHere && partnerStatus !== 'offline' && (
-            <Button size="sm" variant="lavender" onClick={() => invite('movie', { title: film.title, path: `/together/movie/${encodeURIComponent(key)}` })}>
+            <Button
+              size="sm"
+              variant="lavender"
+              onClick={() =>
+                invite('movie', {
+                  title: film.title,
+                  path: `/together/movie/${encodeURIComponent(key)}`,
+                })
+              }
+            >
               Invite {w.them} 🍿
             </Button>
           )}
-          <button type="button" onClick={() => setChatOpen((v) => !v)} aria-pressed={chatOpen} className="grid h-9 w-9 place-items-center rounded-full bg-black/40 text-cream ring-1 ring-white/10 hover:bg-black/60" aria-label="Chat">
+          <button
+            type="button"
+            onClick={() => setChatOpen((v) => !v)}
+            aria-pressed={chatOpen}
+            className="grid h-9 w-9 place-items-center rounded-full bg-black/40 text-cream ring-1 ring-white/10 hover:bg-black/60"
+            aria-label="Chat"
+          >
             <MessageCircle className="h-4 w-4" />
           </button>
           <button
@@ -553,7 +631,12 @@ export default function Theatre() {
       {/* lobby: the ticket */}
       <AnimatePresence>
         {(stage === 'lobby' || stage === 'checking') && (
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }} className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 pt-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 pt-16"
+          >
             <div className="mx-auto max-w-md">
               {ticket ? (
                 <>
@@ -585,7 +668,13 @@ export default function Theatre() {
       {/* seated: controls */}
       <AnimatePresence>
         {seated && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: 0.4 }} className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 bg-gradient-to-t from-black/80 to-transparent p-3 pt-12 sm:p-4 sm:pt-14">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 0.4 }}
+            className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 bg-gradient-to-t from-black/80 to-transparent p-3 pt-12 sm:p-4 sm:pt-14"
+          >
             {mode === 'host' && !fileUrl && (
               <Button variant="primary" icon={Film} onClick={() => fileInput.current?.click()}>
                 Choose the film on this computer
@@ -599,7 +688,14 @@ export default function Theatre() {
                 </button>
               )}
               {['😂', '🥹', '😮', FRIENDS ? '👏' : '❤️', '🍿', '😱'].map((e) => (
-                <motion.button key={e} type="button" whileTap={{ scale: 0.8 }} onClick={() => react(e)} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg ring-1 ring-white/10 hover:bg-black/60" aria-label={`React ${e}`}>
+                <motion.button
+                  key={e}
+                  type="button"
+                  whileTap={{ scale: 0.8 }}
+                  onClick={() => react(e)}
+                  className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg ring-1 ring-white/10 hover:bg-black/60"
+                  aria-label={`React ${e}`}
+                >
                   {e}
                 </motion.button>
               ))}
@@ -619,7 +715,14 @@ export default function Theatre() {
       {/* chat drawer */}
       <AnimatePresence>
         {chatOpen && (
-          <motion.aside initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="absolute bottom-0 right-0 top-0 z-40 flex w-full max-w-sm flex-col bg-surface/95 backdrop-blur" aria-label="Chat">
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="absolute bottom-0 right-0 top-0 z-40 flex w-full max-w-sm flex-col bg-surface/95 backdrop-blur"
+            aria-label="Chat"
+          >
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <p className="text-sm text-cream">Chat</p>
               <button type="button" onClick={() => setChatOpen(false)} className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-cream" aria-label="Close chat">

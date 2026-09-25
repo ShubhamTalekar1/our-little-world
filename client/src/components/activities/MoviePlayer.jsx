@@ -7,7 +7,7 @@ import { loadYouTubeApi } from '../../services/movie/youtube';
  * and callbacks onPlay/onPause/onSeek(t) fired ONLY for local user actions.
  * Remote-applied changes are suppressed so sync events never echo.
  */
-const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, onSeek, onReady, onError, onBlocked }, ref) {
+const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, onSeek, onReady, onError, onBlocked, controls = true }, ref) {
   const video = useRef(null);
   const yt = useRef(null);
   const ytHost = useRef(null);
@@ -39,7 +39,7 @@ const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, o
       .then((YT) => {
         player = new YT.Player(ytHost.current, {
           videoId: source.videoId,
-          playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+          playerVars: { rel: 0, modestbranding: 1, playsinline: 1, controls: 1 },
           events: {
             onReady: () => onReady?.(),
             onStateChange: (e) => {
@@ -77,7 +77,7 @@ const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, o
     <video
       ref={video}
       src={source.src}
-      controls
+      controls={controls}
       playsInline
       preload="metadata"
       className="h-full w-full bg-black object-contain"

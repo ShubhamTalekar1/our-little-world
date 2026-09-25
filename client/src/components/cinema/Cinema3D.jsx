@@ -200,20 +200,71 @@ function titleCard(poster, title) {
   return t;
 }
 
-function Screen({ video, poster, title, playing, curtainsOpen }) {
+// Writes alpha 0 where the screen is, so the real player behind the canvas shows
+// through — while anything in front (heads, seats) still covers it.
+const WINDOW = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0, blending: THREE.NoBlending, depthWrite: true });
+
+// CSS matrix3d that maps a w×h element onto four screen points (a projective warp).
+const adj = (m) => [m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4], m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5], m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3]];
+const mulMM = (a, b) => {
+  const c = new Array(9);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) c[3 * i + j] = a[3 * i] * b[j] + a[3 * i + 1] * b[3 + j] + a[3 * i + 2] * b[6 + j];
+  return c;
+};
+const mulMV = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
+const basis = (p) => {
+  const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1];
+  const v = mulMV(adj(m), [p[6], p[7], 1]);
+  return mulMM(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]);
+};
+function warp(w, h, dst) {
+  const t = mulMM(basis(dst), adj(basis([0, 0, w, 0, 0, h, w, h])));
+  const n = t.map((x) => x / t[8]);
+  return `matrix3d(${[n[0], n[3], 0, n[6], n[1], n[4], 0, n[7], 0, 0, 1, 0, n[2], n[5], 0, n[8]].join(',')})`;
+}
+
+export const FRAME_W = 1280;
+export const FRAME_H = 720;
+
+/** Keeps the HTML player frame glued to the 3D screen. */
+function ScreenTracker({ frameRef, active }) {
+  const { camera, size } = useThree();
+  const corners = useMemo(
+    () => [
+      [-1, 1],
+      [1, 1],
+      [-1, -1],
+      [1, -1],
+    ].map(([sx, sy]) => new THREE.Vector3(SCREEN.x + (sx * SCREEN.w) / 2, SCREEN.y + (sy * SCREEN.h) / 2, SCREEN.z)),
+    [],
+  );
+  const v = useMemo(() => new THREE.Vector3(), []);
+  const cam = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    const el = frameRef?.current;
+    if (!el || !active) return;
+    const pts = [];
+    for (const c of corners) {
+      cam.copy(c).applyMatrix4(camera.matrixWorldInverse);
+      if (cam.z > -0.1) {
+        el.style.visibility = 'hidden'; // screen is behind us (lobby)
+        return;
+      }
+      v.copy(c).project(camera);
+      pts.push(((v.x + 1) / 2) * size.width, ((1 - v.y) / 2) * size.height);
+    }
+    el.style.visibility = 'visible';
+    el.style.transform = warp(FRAME_W, FRAME_H, pts);
+  });
+  return null;
+}
+
+function Screen({ showFilm, poster, title, playing, curtainsOpen }) {
   const light = useRef();
   const left = useRef();
   const right = useRef();
-  const videoTex = useMemo(() => {
-    if (!video) return null;
-    const t = new THREE.VideoTexture(video);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, [video]);
   const cardTex = useMemo(() => titleCard(poster, title ?? ''), [poster, title]);
-  useEffect(() => () => videoTex?.dispose(), [videoTex]);
   useEffect(() => () => cardTex.dispose(), [cardTex]);
-  const showVideo = videoTex && playing !== null;
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
     if (light.current) {
@@ -231,10 +282,16 @@ function Screen({ video, poster, title, playing, curtainsOpen }) {
       <mesh position={[SCREEN.x, SCREEN.y, SCREEN.z - 0.06]} material={mat('#050507')}>
         <boxGeometry args={[SCREEN.w + 0.5, SCREEN.h + 0.5, 0.08]} />
       </mesh>
-      <mesh position={[SCREEN.x, SCREEN.y, SCREEN.z]}>
-        <planeGeometry args={[SCREEN.w, SCREEN.h]} />
-        <meshBasicMaterial map={showVideo ? videoTex : cardTex} toneMapped={false} />
-      </mesh>
+      {showFilm ? (
+        <mesh position={[SCREEN.x, SCREEN.y, SCREEN.z]} material={WINDOW}>
+          <planeGeometry args={[SCREEN.w, SCREEN.h]} />
+        </mesh>
+      ) : (
+        <mesh position={[SCREEN.x, SCREEN.y, SCREEN.z]}>
+          <planeGeometry args={[SCREEN.w, SCREEN.h]} />
+          <meshBasicMaterial map={cardTex} toneMapped={false} />
+        </mesh>
+      )}
       <pointLight ref={light} position={[0, 3.2, -4.5]} color="#b9cdf0" intensity={2.5} distance={22} decay={1.2} />
       {/* curtains */}
       {[left, right].map((ref, i) => (
@@ -535,7 +592,7 @@ const USHER = {
  * The whole cinema in one scene. `view` picks the shot: lobby (ticket check),
  * walk (follow me to my seat), seats (theatre view), screen (zoomed on the film).
  */
-export default function Cinema3D({ view, me, partner, usherPose = 'idle', screenVideo, poster, posters = [], title, playing, curtainsOpen, bubbleRef, onArrive, motion = true }) {
+export default function Cinema3D({ view, me, partner, usherPose = 'idle', showFilm, frameRef, trackFrame, poster, posters = [], title, playing, curtainsOpen, bubbleRef, onArrive, motion = true }) {
   const mine = useMemo(() => seatSpot(me.seat), [me.seat]);
   const theirs = useMemo(() => seatSpot(partner.seat), [partner.seat]);
   const myPath = useMemo(() => (me.stage === 'walking' ? pathTo(me.seat, QUEUE.me) : null), [me.stage, me.seat]);
@@ -545,14 +602,20 @@ export default function Cinema3D({ view, me, partner, usherPose = 'idle', screen
   const seatedThem = ['seated', 'screen'].includes(partner.stage);
 
   return (
-    <Canvas dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: 'high-performance' }} camera={{ fov: 42, near: 0.1, far: 120 }} aria-hidden>
-      <color attach="background" args={['#07050a']} />
+    <Canvas
+      dpr={[1, 1.75]}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      camera={{ fov: 42, near: 0.1, far: 120 }}
+      onCreated={({ gl }) => gl.setClearColor('#07050a', 1)}
+      aria-hidden
+    >
+      <ScreenTracker frameRef={frameRef} active={trackFrame} />
       <fog attach="fog" args={['#07050a', 18, 42]} />
       <HouseLights level={playing ? 0 : 1} />
       <directionalLight position={[3, 8, 6]} intensity={0.5} color="#ffe6cc" />
       <CameraRig view={view} follow={follow} motion={motion} />
       <Auditorium houseLights={playing ? 0 : 1} />
-      <Screen video={screenVideo} poster={poster} title={title} playing={playing} curtainsOpen={curtainsOpen} />
+      <Screen showFilm={showFilm} poster={poster} title={title} playing={playing} curtainsOpen={curtainsOpen} />
       <Lobby posters={posters} />
       <Person config={USHER} pose={usherPose} expression="happy" target={USHER_AT} facing={Math.PI / 2} motion={motion} />
       <Pin at={[USHER_AT[0], USHER_AT[1] + 2.35, USHER_AT[2]]} elRef={bubbleRef} />

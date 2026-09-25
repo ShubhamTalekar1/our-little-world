@@ -18,21 +18,33 @@ class MemoryPresence {
 }
 
 class RedisPresence {
+  // Redis is shared state for several instances; if it's unreachable we keep
+  // going on the local copy instead of failing (or crashing) the request.
   constructor(url) {
+    this.local = new MemoryPresence();
     this.ready = import('ioredis').then(({ default: Redis }) => {
-      this.redis = new Redis(url, { lazyConnect: false, maxRetriesPerRequest: 2 });
+      this.redis = new Redis(url, { lazyConnect: false, maxRetriesPerRequest: 2, enableOfflineQueue: false });
       this.redis.on('error', (e) => console.warn('[presence] redis error:', e.message));
     });
   }
   async get(userId) {
-    await this.ready;
-    const raw = await this.redis.get(`presence:${userId}`);
-    return raw ? JSON.parse(raw) : null;
+    try {
+      await this.ready;
+      const raw = await this.redis.get(`presence:${userId}`);
+      return raw ? JSON.parse(raw) : this.local.get(userId);
+    } catch {
+      return this.local.get(userId);
+    }
   }
   async set(userId, value) {
-    await this.ready;
-    // Expire so a crashed instance can't leave someone "online" forever.
-    await this.redis.set(`presence:${userId}`, JSON.stringify(value), 'EX', 60 * 60 * 12);
+    await this.local.set(userId, value);
+    try {
+      await this.ready;
+      // Expire so a crashed instance can't leave someone "online" forever.
+      await this.redis.set(`presence:${userId}`, JSON.stringify(value), 'EX', 60 * 60 * 12);
+    } catch {
+      /* local copy is enough for now */
+    }
   }
 }
 

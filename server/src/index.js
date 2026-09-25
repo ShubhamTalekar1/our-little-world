@@ -21,3 +21,7 @@ const shutdown = async () => {
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// A stray async error (a dropped socket mid-write, a flaky Redis) should be
+// logged, not take the whole movie night down with it.
+process.on('unhandledRejection', (err) => console.error('[unhandled]', err?.message ?? err));
