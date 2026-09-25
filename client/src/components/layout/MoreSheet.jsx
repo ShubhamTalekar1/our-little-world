@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NAV, MOBILE_PRIMARY } from './nav';
 import { useUiStore } from '../../stores/uiStore';
-import VirtualWallet from '../wallet/VirtualWallet';
 
 export default function MoreSheet() {
   const open = useUiStore((s) => s.mobileMoreOpen);
@@ -39,7 +38,6 @@ export default function MoreSheet() {
                 </motion.div>
               ))}
             </div>
-            <VirtualWallet className="mt-5" />
           </motion.div>
         </motion.div>
       )}

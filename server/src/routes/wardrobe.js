@@ -2,28 +2,11 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { ah, notFound } from '../lib/errors.js';
 import { validate, text, clientId, z } from '../lib/validate.js';
-import { CLOTHING_PRICES } from '../catalog.js';
-import { spend, withTx } from '../services/wallet.js';
 import * as S from '../services/serialize.js';
 
 const router = Router();
 const key = z.string().regex(/^[a-z0-9-]{1,40}$/);
 const items = z.record(key, key.nullable().optional());
-
-router.post(
-  '/unlock',
-  validate(z.object({ itemId: key })),
-  ah(async (req, res) => {
-    const price = CLOTHING_PRICES[req.valid.itemId] ?? 0;
-    await withTx(async (tx) => {
-      const owned = await tx.wardrobeItem.findUnique({ where: { userId_itemKey: { userId: req.user.id, itemKey: req.valid.itemId } } });
-      if (owned) return;
-      await spend(tx, req.user.id, price, `Unlocked ${req.valid.itemId}`);
-      await tx.wardrobeItem.create({ data: { userId: req.user.id, itemKey: req.valid.itemId } });
-    });
-    res.status(201).json({ ok: true });
-  }),
-);
 
 router.post(
   '/outfits',

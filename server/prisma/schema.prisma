@@ -3,8 +3,8 @@
 // Design notes
 // - Everything private hangs off a Couple; every query is scoped by coupleId.
 // - Catalog data (clothing, gifts, furniture, songs) lives in code, not tables:
-//   rows store catalog keys (e.g. "hoodie-lav"), so AvatarItem / GiftCatalog
-//   tables aren't needed until users can create their own items.
+//   rows store catalog keys (e.g. "hoodie-lav"). Everything in the catalog is
+//   available to everyone — there's no currency or unlocking.
 // - Avatar config, outfits, room layout and activity state are small JSON
 //   documents owned by one row; they're always read/written whole.
 // - Presence is ephemeral and lives in Redis (or memory), not Postgres.
@@ -60,8 +60,6 @@ model User {
   couple        Couple?   @relation(fields: [coupleId], references: [id], onDelete: SetNull)
 
   avatar        Avatar?
-  wallet        Wallet?
-  wardrobe      WardrobeItem[]
   outfits       Outfit[]
   giftsSent     Gift[]         @relation("GiftSender")
   giftsReceived Gift[]         @relation("GiftRecipient")
@@ -80,17 +78,6 @@ model Avatar {
   updatedAt DateTime @updatedAt
 }
 
-/// Clothing a user has unlocked (free starter items are implicit).
-model WardrobeItem {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  itemKey   String
-  createdAt DateTime @default(now())
-
-  @@unique([userId, itemKey])
-}
-
 model Outfit {
   id        String   @id @default(cuid())
   userId    String
@@ -102,26 +89,6 @@ model Outfit {
   createdAt DateTime @default(now())
 
   @@index([userId])
-}
-
-/// "VirtualCurrency" — Love Coins. Never real money.
-model Wallet {
-  userId         String        @id
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance        Int           @default(500)
-  lastDailyClaim DateTime?
-  transactions   Transaction[]
-}
-
-model Transaction {
-  id        String   @id @default(cuid())
-  walletId  String
-  wallet    Wallet   @relation(fields: [walletId], references: [userId], onDelete: Cascade)
-  amount    Int
-  reason    String
-  createdAt DateTime @default(now())
-
-  @@index([walletId, createdAt])
 }
 
 /// A sent gift. The recipient's "GiftInventory" is simply their received gifts.
@@ -146,7 +113,6 @@ model Room {
   coupleId    String   @id
   couple      Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
   environment String   @default("bedroom")
-  owned       String[] @default(["plant", "lamp", "fairy"])
   /// RoomItem[] — [{ uid, id, x, y }]; positions are percentages.
   placed      Json     @default("[]")
   updatedAt   DateTime @updatedAt
@@ -162,7 +128,6 @@ model Pet {
   hunger           Float    @default(80)
   happiness        Float    @default(90)
   lastTick         DateTime @default(now())
-  ownedAccessories String[] @default(["none", "bow"])
 }
 
 /// A shared session: movie, dance, date, call, music.

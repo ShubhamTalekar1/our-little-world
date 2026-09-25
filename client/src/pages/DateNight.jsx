@@ -16,11 +16,9 @@ import { SONGS } from '../catalog/songs';
 import { useActivityStore } from '../stores/activityStore';
 import { useRoomStore } from '../stores/roomStore';
 import { useAvatarStore, useMyAvatar } from '../stores/avatarStore';
-import { useWardrobeStore } from '../stores/wardrobeStore';
 import { useCalendarStore } from '../stores/calendarStore';
 import { useMusicStore } from '../stores/musicStore';
 import { useStoryStore } from '../stores/storyStore';
-import { useWalletStore } from '../stores/walletStore';
 import { usePresenceStore } from '../stores/presenceStore';
 import { toast } from '../stores/uiStore';
 import { usePartnerWords } from '../lib/words';
@@ -149,9 +147,7 @@ export default function DateNight() {
     const theme = THEMED_OUTFITS.find((t) => t.id === label(DRESS_CODES, plan.dress)?.outfit);
     if (!theme || !avatar) return;
     const items = theme.variants[avatar.presentation ?? 'feminine'];
-    const { isOwned } = useWardrobeStore.getState();
-    // Only pieces you already own — we never spend coins without asking.
-    const wearable = Object.fromEntries(Object.entries(items).filter(([, id]) => isOwned(id)));
+    const wearable = items;
     useAvatarStore.getState().wearOutfit({ ...avatar.outfit, ...wearable, ...(wearable.dress ? { top: undefined, bottom: undefined } : {}) });
   };
 
@@ -165,7 +161,6 @@ export default function DateNight() {
       useMusicStore.getState().play(plan.song);
       useStoryStore.getState().inc('dates');
       useStoryStore.getState().recordFirst('first-date', '🌃', 'First date night', plan.title);
-      useWalletStore.getState().earn(40, 'Date night');
       setStarting(false);
       toast('Your date has begun ✨', { emoji: ENV_BY_ID[plan.env].emoji });
     }, 700);
@@ -263,7 +258,7 @@ export default function DateNight() {
             </motion.div>
           </AnimatePresence>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
-            <Heart className="h-3 w-3" aria-hidden /> Starting a date changes the room and puts on your dress code (with pieces you own).
+            <Heart className="h-3 w-3" aria-hidden /> Starting a date changes the room and puts on your dress code.
           </p>
         </div>
       </div>

@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
 import GiftArt from './GiftArt';
 import { RARITY } from '../../catalog/gifts';
-import { CoinAmount } from '../wallet/VirtualWallet';
 
-export default function GiftCard({ gift, onSelect, index = 0, affordable = true }) {
+export default function GiftCard({ gift, onSelect, index = 0 }) {
   const rarity = RARITY[gift.rarity];
   return (
     <motion.button
@@ -14,16 +13,15 @@ export default function GiftCard({ gift, onSelect, index = 0, affordable = true 
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(gift)}
       className="group card flex flex-col items-center gap-2 p-4 text-center transition hover:border-line-strong hover:bg-surface-2/80"
-      aria-label={`${gift.name}, ${gift.price} coins, ${rarity.label}`}
+      aria-label={`${gift.name}, ${rarity.label}`}
     >
       <GiftArt gift={gift} size={84} />
       <div className="mt-1">
         <p className="text-sm font-medium text-cream">{gift.name}</p>
         <p className="mt-0.5 line-clamp-2 min-h-[2.5em] text-[11.5px] leading-snug text-muted">{gift.description}</p>
       </div>
-      <div className="mt-auto flex w-full items-center justify-between pt-1 text-xs">
+      <div className="mt-auto pt-1 text-xs">
         <span style={{ color: rarity.color }}>{rarity.label}</span>
-        <CoinAmount amount={gift.price} className={affordable ? 'text-cream-dim' : 'text-rose'} />
       </div>
     </motion.button>
   );

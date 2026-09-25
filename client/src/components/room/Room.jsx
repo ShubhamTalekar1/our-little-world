@@ -92,10 +92,12 @@ export default function Room({
   if (overridePoses) ({ myPose = myPose, partnerPose = partnerPose, myExpr = myExpr, partnerExpr = partnerExpr } = overridePoses);
 
   const close = mode === 'dance' || (ix?.together && partnerHere);
-  const myX = close ? (mode === 'dance' ? 45 : 44.5) : 38;
-  const partnerX = close ? (mode === 'dance' ? 55 : 55.5) : 62;
+  // 3D chibis have big heads — "close" still leaves room between them.
+  const myX = close ? (mode === 'dance' ? 43 : 42.5) : 37;
+  const partnerX = close ? (mode === 'dance' ? 57 : 57.5) : 63;
   const floorY = mode === 'mini' ? 96 : 94;
-  const avatarH = Math.max(90, size.height * (mode === 'mini' ? 0.62 : 0.56) * avatarScale);
+  const narrow = size.width < 520;
+  const avatarH = Math.max(90, size.height * (mode === 'mini' ? 0.62 : narrow ? 0.46 : 0.56) * avatarScale);
   const scale = Math.max(0.55, Math.min(1.4, size.width / 900));
 
   const partnerMood = checkins.find((c) => c.userId === partner?.id && isSameDay(c.at, Date.now()));

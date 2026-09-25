@@ -3,25 +3,23 @@ import { prisma } from '../db.js';
 import { ah, notFound } from '../lib/errors.js';
 import { validate, text, clientId, isoDate, z } from '../lib/validate.js';
 import { STAT_KEYS } from '../catalog.js';
-import { earn, withTx } from '../services/wallet.js';
 import * as S from '../services/serialize.js';
 
 const router = Router();
-// Shared moments that also leave a trace in the Activity history + reward coins.
-const SESSION_TYPES = { movies: { type: 'movie', reward: 20, reason: 'Movie night together' }, dances: { type: 'dance', reward: 30, reason: 'A slow dance' }, dates: { type: 'date', reward: 40, reason: 'Date night' } };
+// Shared moments that also leave a trace in the Activity history.
+const SESSION_TYPES = { movies: 'movie', dances: 'dance', dates: 'date' };
 
 router.post(
   '/stats',
   validate(z.object({ key: z.enum(STAT_KEYS), by: z.literal(1).default(1) })),
   ah(async (req, res) => {
-    const stats = await withTx(async (tx) => {
+    const stats = await prisma.$transaction(async (tx) => {
       const couple = await tx.couple.findUnique({ where: { id: req.coupleId } });
       const next = { ...(couple.stats ?? {}), [req.valid.key]: ((couple.stats ?? {})[req.valid.key] ?? 0) + 1 };
       await tx.couple.update({ where: { id: req.coupleId }, data: { stats: next } });
       const session = SESSION_TYPES[req.valid.key];
       if (session) {
-        await tx.activity.create({ data: { coupleId: req.coupleId, type: session.type, participants: { create: { userId: req.user.id } } } });
-        await earn(tx, req.user.id, session.reward, session.reason);
+        await tx.activity.create({ data: { coupleId: req.coupleId, type: session, participants: { create: { userId: req.user.id } } } });
       }
       return next;
     });

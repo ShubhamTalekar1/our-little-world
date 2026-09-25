@@ -7,15 +7,15 @@ export const PET_SPECIES = [
 ];
 
 export const PET_ACCESSORIES = [
-  { id: 'none', name: 'Nothing', price: 0 },
-  { id: 'bow', name: 'Ribbon bow', price: 0 },
-  { id: 'scarf', name: 'Knit scarf', price: 40 },
-  { id: 'crown', name: 'Tiny crown', price: 120 },
-  { id: 'flower', name: 'Flower', price: 30 },
+  { id: 'none', name: 'Nothing' },
+  { id: 'bow', name: 'Ribbon bow' },
+  { id: 'scarf', name: 'Knit scarf' },
+  { id: 'crown', name: 'Tiny crown' },
+  { id: 'flower', name: 'Flower' },
 ];
 
 export const PET_FOODS = [
-  { id: 'treat', name: 'Treat', emoji: '🍪', price: 5, hunger: 15 },
-  { id: 'meal', name: 'Warm meal', emoji: '🍲', price: 12, hunger: 40 },
-  { id: 'berries', name: 'Berries', emoji: '🫐', price: 8, hunger: 25 },
+  { id: 'treat', name: 'Treat', emoji: '🍪', hunger: 15 },
+  { id: 'meal', name: 'Warm meal', emoji: '🍲', hunger: 40 },
+  { id: 'berries', name: 'Berries', emoji: '🫐', hunger: 25 },
 ];

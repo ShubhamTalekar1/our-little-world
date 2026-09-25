@@ -8,10 +8,8 @@ import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import GiftCard from '../components/gifts/GiftCard';
 import GiftArt from '../components/gifts/GiftArt';
-import VirtualWallet, { CoinAmount } from '../components/wallet/VirtualWallet';
 import { GIFTS, GIFTS_BY_ID, RARITY, GIFT_MESSAGES } from '../catalog/gifts';
 import { useGiftStore } from '../stores/giftStore';
-import { useWalletStore } from '../stores/walletStore';
 import { usePeopleStore } from '../stores/peopleStore';
 import { useUiStore, toast } from '../stores/uiStore';
 import { useStoryStore } from '../stores/storyStore';
@@ -22,12 +20,10 @@ import { playSfx } from '../services/audio/sfx';
 function SendGiftModal({ gift, onClose }) {
   const w = usePartnerWords();
   const partner = usePeopleStore((s) => s.partner);
-  const balance = useWalletStore((s) => s.balance);
   const send = useGiftStore((s) => s.send);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   if (!gift) return null;
-  const affordable = balance >= gift.price;
 
   const onSend = () => {
     setSending(true);
@@ -35,7 +31,7 @@ function SendGiftModal({ gift, onClose }) {
       const res = send(gift.id, message, partner.id);
       setSending(false);
       if (!res.ok) {
-        toast(res.reason === 'coins' ? 'Not quite enough Love Coins' : 'That didn’t send — try again?', { emoji: '🪙', tone: 'error' });
+        toast('That didn’t send — try again?', { emoji: '☁️', tone: 'error' });
         return;
       }
       onClose();
@@ -71,22 +67,17 @@ function SendGiftModal({ gift, onClose }) {
           ))}
         </div>
 
-        <div className="mt-6 flex w-full items-center justify-between">
-          <span className="text-sm text-muted">
-            <CoinAmount amount={gift.price} className="text-cream" /> <span className="text-faint">of {balance.toLocaleString()}</span>
-          </span>
-          <Button variant="primary" size="lg" onClick={onSend} loading={sending} disabled={!affordable} data-autofocus>
+        <div className="mt-6 flex w-full justify-center">
+          <Button variant="primary" size="lg" onClick={onSend} loading={sending} data-autofocus>
             Send to {w.them} ❤️
           </Button>
         </div>
-        {!affordable && <p className="mt-3 text-xs text-rose">You need {gift.price - balance} more Love Coins — try the daily hello or a check-in.</p>}
       </div>
     </Modal>
   );
 }
 
 function Shop({ onPick }) {
-  const balance = useWalletStore((s) => s.balance);
   const [rarity, setRarity] = useState('all');
   const list = GIFTS.filter((g) => rarity === 'all' || g.rarity === rarity);
   return (
@@ -105,7 +96,7 @@ function Shop({ onPick }) {
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {list.map((g, i) => (
-          <GiftCard key={g.id} gift={g} index={i} onSelect={onPick} affordable={balance >= g.price} />
+          <GiftCard key={g.id} gift={g} index={i} onSelect={onPick} />
         ))}
       </div>
     </>
@@ -190,9 +181,7 @@ export default function Gifts() {
   const w = usePartnerWords();
   return (
     <div>
-      <PageHeader eyebrow="Gifts" title={`Send ${w.them} something`} subtitle="Little things, for no reason at all. Paid for with Love Coins — never real money.">
-        <VirtualWallet compact />
-      </PageHeader>
+      <PageHeader eyebrow="Gifts" title={`Send ${w.them} something`} subtitle="Little things, for no reason at all." />
       <Tabs
         tabs={[
           { id: 'shop', label: 'Gift shop', emoji: '🛍️' },

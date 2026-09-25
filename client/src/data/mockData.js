@@ -21,20 +21,7 @@ export const seedPeople = () => ({
 
 export const seedAvatars = () => ({ [ME_ID]: AVATAR_ME, [PARTNER_ID]: AVATAR_HER });
 
-export const seedWallet = () => ({
-  balance: 1250,
-  lastDailyClaim: null,
-  transactions: [
-    { id: 't1', amount: 50, reason: 'Daily hello', at: daysAgo(1, 9) },
-    { id: 't2', amount: -40, reason: 'Sent a Red Rose', at: daysAgo(1, 21) },
-    { id: 't3', amount: 100, reason: 'Movie night together', at: daysAgo(3, 23) },
-    { id: 't4', amount: 25, reason: 'Daily check-in', at: daysAgo(4, 10) },
-    { id: 't5', amount: -120, reason: 'Unlocked Rust knit sweater', at: daysAgo(6, 18) },
-  ],
-});
-
 export const seedWardrobe = () => ({
-  unlocked: ['sweater-rust', 'jacket-leather', 'blazer-char'],
   outfits: [
     { id: 'o1', name: 'Date Night', emoji: '❤️', favorite: true, items: { top: 'shirt-white', outer: 'jacket-leather', bottom: 'jeans-black', shoes: 'boots-brown', watch: 'watch-gold' } },
     { id: 'o2', name: 'Cozy Sunday', emoji: '☕', favorite: true, items: { top: 'hoodie-oat', bottom: 'sweats-grey', shoes: 'sneakers-white' } },
@@ -62,7 +49,6 @@ export const seedGifts = () => ({
 
 export const seedRoom = () => ({
   environment: 'bedroom',
-  owned: ['plant', 'lamp', 'fairy', 'books', 'candles', 'flowers', 'teddy', 'frame', 'speaker', 'cat-bed'],
   placed: [
     { uid: 'r1', id: 'plant', x: 7, y: 72 },
     { uid: 'r2', id: 'lamp', x: 86, y: 64 },
@@ -190,7 +176,6 @@ export const seedPet = () => ({
   hunger: 64,
   happiness: 82,
   lastTick: new Date().toISOString(),
-  ownedAccessories: ['none', 'bow', 'scarf'],
   log: [
     { at: daysAgo(0, 9), text: 'She fed Mochi a treat 🍪' },
     { at: daysAgo(1, 22), text: 'You played with Mochi' },

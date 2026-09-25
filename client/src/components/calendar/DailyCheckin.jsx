@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { MOODS, MOODS_BY_ID } from '../../catalog/moods';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { usePeopleStore } from '../../stores/peopleStore';
-import { useWalletStore } from '../../stores/walletStore';
 import { toast } from '../../stores/uiStore';
 import { usePartnerWords } from '../../lib/words';
 import { isSameDay } from '../../lib/time';
@@ -28,9 +27,8 @@ export default function DailyCheckin({ className = '' }) {
     if (!mood) return;
     const first = !mine;
     checkIn(me.id, mood, note);
-    if (first) useWalletStore.getState().earn(25, 'Daily check-in');
     playSfx('success');
-    toast(first ? 'Checked in · +25 Love Coins' : 'Check-in updated', { emoji: MOODS_BY_ID[mood].emoji });
+    toast(first ? 'Shared with ' + w.them : 'Check-in updated', { emoji: MOODS_BY_ID[mood].emoji });
     setEditing(false);
     setMood(null);
     setNote('');

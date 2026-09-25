@@ -71,11 +71,11 @@ test('bootstrap returns the shared world', async () => {
   const { status, data } = await call('GET', '/bootstrap', { token: A.token });
   assert.equal(status, 200);
   assert.equal(data.partner.id, B.id);
-  assert.equal(data.wallet.balance, 500);
+  assert.equal(data.wallet, undefined, 'no currency in this world');
   assert.equal(data.room.environment, 'bedroom');
 });
 
-test('gifts cost coins, reach the partner in realtime and can be opened once', async () => {
+test('gifts reach the partner in realtime and can be opened once', async () => {
   const sockB = connect(base, { auth: { token: B.token }, transports: ['websocket'] });
   await once(sockB, 'connect');
   const received = once(sockB, 'gift:received');
@@ -86,20 +86,12 @@ test('gifts cost coins, reach the partner in realtime and can be opened once', a
   assert.equal(g.from, A.id);
   assert.equal(g.message, '<b>Just because.</b>', 'stored as text; React escapes on render');
 
-  const wallet = await call('GET', '/wallet', { token: A.token });
-  assert.equal(wallet.data.balance, 460);
-
   assert.equal((await call('POST', `/gifts/${g.id}/open`, { token: A.token })).status, 404, 'only the recipient opens it');
   const opened = await call('POST', `/gifts/${g.id}/open`, { token: B.token });
   assert.equal(opened.data.gift.opened, true);
   assert.equal((await call('POST', '/gifts/send', { token: A.token, body: { giftId: 'moon' } })).status, 201);
-  assert.equal((await call('POST', '/gifts/send', { token: A.token, body: { giftId: 'moon' } })).status, 400, 'not enough coins');
+  assert.equal((await call('POST', '/gifts/send', { token: A.token, body: { giftId: 'diamond-yacht' } })).status, 400, 'unknown gifts are rejected');
   sockB.close();
-});
-
-test('the daily reward can only be claimed once', async () => {
-  assert.equal((await call('POST', '/wallet/daily', { token: B.token })).status, 200);
-  assert.equal((await call('POST', '/wallet/daily', { token: B.token })).status, 400);
 });
 
 test('sockets relay ephemeral events to the partner only, with a trusted sender', async () => {
@@ -119,7 +111,7 @@ test('sockets relay ephemeral events to the partner only, with a trusted sender'
   sB.on('gift:received', () => (fakeGift = true));
   sA.emit('gift:sent', { giftId: 'moon' });
   await new Promise((r) => setTimeout(r, 300));
-  assert.equal(fakeGift, false, 'gifts only arrive via the paid REST path');
+  assert.equal(fakeGift, false, 'gifts only arrive via the REST path, after saving');
   assert.equal(leaked, false, 'other couples never see our events');
   [sA, sB, sC].forEach((s) => s.close());
 });

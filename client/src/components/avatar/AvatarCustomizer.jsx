@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, Shuffle } from 'lucide-react';
+import { Check, Shuffle } from 'lucide-react';
 import Avatar from './Avatar';
 import Tabs from '../ui/Tabs';
 import Swatch from '../ui/Swatch';
@@ -8,9 +8,6 @@ import {
   SKIN_TONES, HAIR_COLORS, EYE_COLORS, BODY_TYPES, HEIGHTS, FACE_SHAPES, HAIR_STYLES, EYE_STYLES,
   BROW_STYLES, NOSE_STYLES, MOUTH_STYLES, FACE_EXTRAS, CLOTHING, SLOTS, THEMED_OUTFITS,
 } from '../../catalog/avatarItems';
-import { useWardrobeStore } from '../../stores/wardrobeStore';
-import { toast } from '../../stores/uiStore';
-import { CoinAmount } from '../wallet/VirtualWallet';
 import { cn } from '../../lib/cn';
 
 const TABS = [
@@ -52,31 +49,25 @@ function Chips({ options, value, onChange, label }) {
 }
 
 /** A tile that previews the avatar with one option applied. */
-const PreviewTile = memo(function PreviewTile({ config, selected, onClick, label, crop = 'head', locked, price, size = 72 }) {
+const PreviewTile = memo(function PreviewTile({ config, selected, onClick, label, crop = 'head', size = 72 }) {
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${label}${locked ? `, locked, ${price} coins` : ''}`}
+      aria-label={label}
       className={cn(
         'relative flex flex-col items-center gap-1 overflow-hidden rounded-2xl border p-2 transition',
         selected ? 'border-peach/60 bg-peach/10' : 'border-line bg-surface-2/50 hover:border-line-strong',
       )}
     >
-      <div className={cn('grid place-items-center', locked && 'opacity-60')} style={{ height: size }}>
+      <div className="grid place-items-center" style={{ height: size }}>
         <Avatar config={config} crop={crop} size={size} animated={false} label={label} />
       </div>
       <span className="w-full truncate text-center text-[11px] text-cream-dim">{label}</span>
       {selected && (
         <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-peach text-ink">
           <Check className="h-3 w-3" />
-        </span>
-      )}
-      {locked && (
-        <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-ink/80 px-1.5 py-0.5 text-[10px] text-lamp">
-          <Lock className="h-2.5 w-2.5" />
-          {price}
         </span>
       )}
     </motion.button>
@@ -87,32 +78,17 @@ function Grid({ children }) {
   return <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">{children}</div>;
 }
 
-/**
- * Controlled customizer: works on any avatar config. `enforceOwnership`
- * requires locked clothing to be unlocked with Love Coins first.
- */
-export default function AvatarCustomizer({ value, onChange, enforceOwnership = true, tabs = TABS.map((t) => t.id), pose = 'idle', expression, aside }) {
+/** Controlled customizer: works on any avatar config. */
+export default function AvatarCustomizer({ value, onChange, tabs = TABS.map((t) => t.id), pose = 'idle', expression, aside }) {
   const [tab, setTab] = useState(tabs[0]);
   const [clothingSlot, setClothingSlot] = useState('top');
   const [accSlot, setAccSlot] = useState('glasses');
-  const isOwned = useWardrobeStore((s) => s.isOwned);
-  const unlocked = useWardrobeStore((s) => s.unlocked); // re-render on unlocks
-  const unlock = useWardrobeStore((s) => s.unlock);
-  void unlocked;
 
   const set = (patch) => onChange({ ...value, ...patch });
   const setHair = (patch) => set({ hair: { ...value.hair, ...patch } });
   const setFace = (patch) => set({ face: { ...value.face, ...patch } });
 
   const equip = (item) => {
-    if (enforceOwnership && !isOwned(item.id)) {
-      const res = unlock(item.id);
-      if (!res.ok) {
-        toast(`You need ${item.price} Love Coins for that`, { emoji: '🪙', tone: 'error' });
-        return;
-      }
-      toast(`Unlocked ${item.name}`, { emoji: '✨' });
-    }
     const outfit = { ...value.outfit };
     if (outfit[item.slot] === item.id) {
       delete outfit[item.slot];
@@ -266,16 +242,15 @@ export default function AvatarCustomizer({ value, onChange, enforceOwnership = t
                 <Grid>
                   {itemsFor(slot).map((item) => {
                     const worn = value.outfit?.[slot] === item.id;
-                    const locked = enforceOwnership && !isOwned(item.id);
                     const preview = { ...value, outfit: { ...value.outfit, [slot]: item.id, ...(slot === 'dress' ? { top: undefined, bottom: undefined } : {}), ...(slot === 'top' || slot === 'bottom' ? { dress: undefined } : {}) } };
                     return (
-                      <PreviewTile key={item.id} config={preview} crop={CROP_FOR_SLOT[slot]} selected={worn} locked={locked} price={item.price} onClick={() => equip(item)} label={item.name} />
+                      <PreviewTile key={item.id} config={preview} crop={CROP_FOR_SLOT[slot]} selected={worn} onClick={() => equip(item)} label={item.name} />
                     );
                   })}
                 </Grid>
               );
             })()}
-            <p className="mt-3 text-xs text-muted">Tap something you’re wearing to take it off. Locked pieces unlock with Love Coins.</p>
+            <p className="mt-3 text-xs text-muted">Tap something you’re wearing to take it off.</p>
           </>
         )}
 
@@ -284,24 +259,12 @@ export default function AvatarCustomizer({ value, onChange, enforceOwnership = t
             {THEMED_OUTFITS.flatMap((t) =>
               ['feminine', 'masculine'].map((v) => {
                 const items = t.variants[v];
-                const cost = Object.values(items).reduce((sum, id) => sum + (enforceOwnership && !isOwned(id) ? CLOTHING.find((c) => c.id === id)?.price ?? 0 : 0), 0);
                 return (
                   <motion.button
                     key={`${t.id}-${v}`}
                     whileHover={{ y: -3 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
-                      if (cost > 0) {
-                        const missing = Object.values(items).filter((id) => !isOwned(id));
-                        for (const id of missing) {
-                          const res = unlock(id);
-                          if (!res.ok) {
-                            toast(`That look needs ${cost} Love Coins`, { emoji: '🪙', tone: 'error' });
-                            return;
-                          }
-                        }
-                        toast(`Unlocked the ${t.name} look`, { emoji: t.emoji });
-                      }
                       onChange({ ...value, outfit: { ...items } });
                     }}
                     className="card flex flex-col items-center p-3 transition hover:border-line-strong"
@@ -310,7 +273,6 @@ export default function AvatarCustomizer({ value, onChange, enforceOwnership = t
                     <span className="mt-2 text-sm text-cream">
                       {t.emoji} {t.name}
                     </span>
-                    {cost > 0 ? <CoinAmount amount={cost} className="text-xs text-lamp" /> : <span className="text-xs text-muted">Ready to wear</span>}
                   </motion.button>
                 );
               }),

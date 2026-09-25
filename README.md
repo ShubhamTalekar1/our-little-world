@@ -55,8 +55,8 @@ npm test
 | Area | Where | Notes |
 | --- | --- | --- |
 | Home | `pages/Home.jsx` | The room, presence, "What should we do tonight?", tonight's plan, countdowns, check-in, pet |
-| Avatars | `components/avatar/` | Layered SVG renderer (`Avatar`) with poses & expressions, `AvatarCustomizer` |
-| Wardrobe | `pages/Wardrobe.jsx` | Closet, boutique (Love Coins), saved/renamed/favourite outfits |
+| Avatars | `components/avatar/` | 3D chibi characters (Three.js / React Three Fiber) with poses & expressions, `AvatarCustomizer` |
+| Wardrobe | `pages/Wardrobe.jsx` | Closet, saved/renamed/favourite outfits |
 | Gifts | `pages/Gifts.jsx`, `components/gifts/` | Shop, send animation, full-screen opening, "send a kiss back" |
 | Together | `pages/Together.jsx` | Movie night (sync + reactions + video bubbles), slow dance, call, music, date night |
 | Call | `stores/callStore.js`, `services/rtc/peer.js` | WebRTC with camera/mic/screen share/PiP |
@@ -70,17 +70,17 @@ npm test
 ### Client architecture
 
 - **Catalogs** (`client/src/catalog/`) — clothing, gifts, environments, furniture, songs, pets, achievements. Pure data. Adding a gift or an item is one entry.
-- **Mock data** (`client/src/data/mockData.js`) — the only place demo values live (142 days together, 1,250 coins, 18 memories…). Stores seed from it; components never import it.
-- **Stores** (`client/src/stores/`) — one Zustand store per domain: auth, people, avatar, wardrobe, wallet, gifts, room, presence, activity, chat, notifications, memories, letters, calendar, check-ins, pet, music, story, call, settings, ui. Each action does an optimistic local update, emits a realtime event if the other person should know, and calls `remote(() => api…)` (a no-op in demo mode).
+- **Mock data** (`client/src/data/mockData.js`) — the only place demo values live (142 days together, 18 memories…). Stores seed from it; components never import it.
+- **Stores** (`client/src/stores/`) — one Zustand store per domain: auth, people, avatar, wardrobe, gifts, room, presence, activity, chat, notifications, memories, letters, calendar, check-ins, pet, music, story, call, settings, ui. Each action does an optimistic local update, emits a realtime event if the other person should know, and calls `remote(() => api…)` (a no-op in demo mode).
 - **Realtime** (`client/src/services/realtime/`) — a transport-agnostic hub. `DemoTransport` + `DemoPartner` in demo mode, `SocketTransport` otherwise. `bindings.js` routes incoming events into stores. Event names are in `events.js` (`gift:received`, `movie:play`, `interaction`, `dance:start`, `rtc:offer`, …).
 - **Environments** (`components/room/scenes/`) — seven hand-drawn SVG scenes with rain, stars, fireflies, fire, a live wall clock. New place = new scene component + catalog entry.
 
 ### Server architecture
 
-- `routes/` — `/api/auth`, `/users`, `/avatars`, `/wardrobe`, `/gifts`, `/wallet`, `/rooms`, `/activities`, `/messages`, `/memories`, `/letters`, `/events`, `/notifications`, `/presence`, `/media`, `/bootstrap` (the whole small world in one request).
-- `services/` — wallet (atomic spends), notifications, payments, serializers.
+- `routes/` — `/api/auth`, `/users`, `/avatars`, `/wardrobe`, `/gifts`, `/rooms`, `/activities`, `/messages`, `/memories`, `/letters`, `/events`, `/notifications`, `/presence`, `/media`, `/bootstrap` (the whole small world in one request).
+- `services/` — notifications and serializers.
 - `realtime/` — Socket.IO auth, a relay for ephemeral events, and presence (Redis if `REDIS_URL` is set, memory otherwise).
-- `prisma/schema.prisma` — User, Couple, Avatar, WardrobeItem, Outfit, Wallet, Transaction, Gift, Room, Pet, Activity, ActivityParticipant, Message, Media, Memory, Letter, SharedEvent, Countdown, CheckIn, Milestone, Achievement, Notification. Catalog items are keys, not tables; presence isn't stored in Postgres.
+- `prisma/schema.prisma` — User, Couple, Avatar, Outfit, Gift, Room, Pet, Activity, ActivityParticipant, Message, Media, Memory, Letter, SharedEvent, Countdown, CheckIn, Milestone, Achievement, Notification. Catalog items are keys, not tables; presence isn't stored in Postgres.
 
 ### Security & privacy
 
@@ -88,8 +88,7 @@ npm test
 - Every private query is scoped by the signed-in user's `coupleId` (tests check that another couple gets 404s).
 - Invite codes are single-use; a couple can never have a third member.
 - zod validation on every write; text is trimmed/cleaned and always rendered through React (escaped).
-- Prices are enforced server-side with conditional updates, so coins can't be overdrawn or double-claimed.
-- Anything persisted or paid for (messages, gifts, letters, memories, plans, check-ins) reaches the other person **from the server after it's saved** — the socket relay only forwards ephemeral events and always stamps the real sender.
+- Anything persisted (messages, gifts, letters, memories, plans, check-ins) reaches the other person **from the server after it's saved** — the socket relay only forwards ephemeral events and always stamps the real sender.
 - Sealed letters are sent without their text until they unlock.
 - Uploads are checked by magic bytes (not file name), stored per couple and served only to that couple.
 - No secrets in the frontend; configuration via env files.
@@ -109,12 +108,12 @@ Semantic landmarks and headings, skip link, labelled controls, focus-visible sty
 | Music | Generative arrangements via Web Audio (no copyrighted audio) | `services/audio/synth.js` exposes `play/stop` — replace with a provider SDK |
 | Movies | Openly licensed Blender films, local files, or YouTube links; play/pause/seek synced | `components/activities/MoviePlayer.jsx` player adapters |
 | GIFs | Local animated sticker set | `services/media/gifs.js` (`search(query)`) — add Giphy/Tenor with a server-side key |
-| Payments | Love Coins only; "top-ups" are free | `server/src/services/payments.js` — add Stripe Checkout + webhook crediting |
 | Photos (demo) | Resized in-browser and kept locally | `services/media/upload.js` → `POST /api/media` |
 
 ## Decisions worth knowing
 
-- **2.5D SVG instead of 3D avatars.** Three.js/R3F would have meant low-poly characters that feel colder than the hand-drawn look, plus a large bundle. The avatar renderer is isolated behind `<Avatar config pose expression />`, so a 3D renderer can replace it later without touching the rest of the app.
+- **3D chibi avatars, built from code.** Each character is assembled procedurally from the avatar config (`components/avatar/chibi/buildChibi.js`) — no model files to download, and every clothing item and hairstyle is a few lines. Big animated avatars get a live WebGL canvas; thumbnails are rendered once by a shared renderer and cached as images, because browsers only allow a handful of live WebGL canvases per page. Devices without WebGL fall back to the older 2D drawing.
+- **No currency.** Everything in the gift shop, wardrobe, room and pet corner is simply available — nothing to earn or buy.
 - **Sockets relay, REST persists.** It keeps realtime cheap and makes the server the single source of truth for anything that matters.
 - **Music is generated** so the music room and slow dance actually make sound without shipping or streaming anyone's songs.
 

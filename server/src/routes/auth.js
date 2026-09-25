@@ -6,7 +6,6 @@ import { ah, badRequest, unauthorized, conflict } from '../lib/errors.js';
 import { validate, text, z } from '../lib/validate.js';
 import { hashPassword, checkPassword, signToken, COOKIE, cookieOptions } from '../lib/auth.js';
 import { requireAuth } from '../middleware/auth.js';
-import { config } from '../config.js';
 import * as S from '../services/serialize.js';
 
 const router = Router();
@@ -44,9 +43,8 @@ router.post(
         couple = await tx.couple.create({ data: { inviteCode: inviteCode(), room: { create: {} }, pet: { create: {} } } });
       }
       const user = await tx.user.create({
-        data: { name, email, passwordHash, timezone: timezone ?? 'UTC', coupleId: couple.id, wallet: { create: { balance: config.startingCoins } } },
+        data: { name, email, passwordHash, timezone: timezone ?? 'UTC', coupleId: couple.id },
       });
-      await tx.transaction.create({ data: { walletId: user.id, amount: config.startingCoins, reason: 'Welcome to your little world' } });
       return { user, couple };
     });
 

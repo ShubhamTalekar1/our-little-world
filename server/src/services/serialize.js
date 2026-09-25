@@ -35,5 +35,5 @@ export const milestone = (m) => ({ id: m.id, emoji: m.emoji, title: m.title, not
 export const outfit = (o) => ({ id: o.id, name: o.name, emoji: o.emoji, favorite: o.favorite, items: o.items });
 export const pet = (p) =>
   p
-    ? { adopted: p.adopted, species: p.species, name: p.name, accessory: p.accessory, hunger: p.hunger, happiness: p.happiness, lastTick: p.lastTick, ownedAccessories: p.ownedAccessories, log: [] }
-    : { adopted: false, ownedAccessories: ['none', 'bow'], log: [] };
+    ? { adopted: p.adopted, species: p.species, name: p.name, accessory: p.accessory, hunger: p.hunger, happiness: p.happiness, lastTick: p.lastTick, log: [] }
+    : { adopted: false, log: [] };

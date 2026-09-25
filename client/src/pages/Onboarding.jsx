@@ -145,7 +145,7 @@ export default function Onboarding({ joining = false }) {
             </>
           )}
         </div>
-        <AvatarCustomizer value={avatar} onChange={setAvatar} enforceOwnership={false} tabs={['body', 'hair', 'face', 'clothing', 'looks']} />
+        <AvatarCustomizer value={avatar} onChange={setAvatar} tabs={['body', 'hair', 'face', 'clothing', 'looks']} />
       </div>
       {error && <p className="mt-3 text-center text-sm text-rose" role="alert">{error}</p>}
       <div className="mt-6 flex justify-between">

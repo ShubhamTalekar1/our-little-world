@@ -5,17 +5,13 @@ import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import Toggle from '../components/ui/Toggle';
 import Modal from '../components/ui/Modal';
-import VirtualWallet, { CoinAmount } from '../components/wallet/VirtualWallet';
 import { useSettingsStore } from '../stores/settingsStore';
 import { usePeopleStore } from '../stores/peopleStore';
 import { useAuthStore } from '../stores/authStore';
-import { useWalletStore } from '../stores/walletStore';
 import { toast } from '../stores/uiStore';
 import { clearPersistedStores } from '../stores/createStore';
 import { playSfx } from '../services/audio/sfx';
-import { paymentProvider, COIN_PACKS } from '../services/payments';
 import { DEMO_MODE } from '../config/env';
-import { timeAgo } from '../lib/time';
 import { cn } from '../lib/cn';
 
 function Section({ id, title, description, children }) {
@@ -36,7 +32,6 @@ const SECTIONS = [
   ['privacy', 'Privacy'],
   ['sound', 'Sound'],
   ['appearance', 'Appearance & motion'],
-  ['currency', 'Love Coins'],
   ['couple', 'Couple'],
 ];
 
@@ -44,27 +39,8 @@ export default function Settings() {
   const s = useSettingsStore();
   const { me, partner, couple, updateMe, updatePartner, updateCouple } = usePeopleStore();
   const logout = useAuthStore((st) => st.logout);
-  const { transactions, earn } = useWalletStore();
-  const [buying, setBuying] = useState(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const navigate = useNavigate();
-
-  const buy = async (pack) => {
-    setBuying(pack.id);
-    try {
-      const res = await paymentProvider.purchase(pack.id);
-      if (res.ok) {
-        if (res.balance == null) earn(res.coins, `${pack.label} top-up`);
-        else useWalletStore.setState({ balance: res.balance });
-        playSfx('success');
-        toast(`+${res.coins} Love Coins`, { emoji: pack.emoji });
-      }
-    } catch (e) {
-      toast(e.message, { emoji: '🪙', tone: 'error' });
-    } finally {
-      setBuying(null);
-    }
-  };
 
   return (
     <div>
@@ -173,37 +149,6 @@ export default function Settings() {
               ))}
             </div>
             <p className="mt-3 text-xs text-muted">The theme is always evening — warm and dim, easy on the eyes.</p>
-          </Section>
-
-          <Section id="currency" title="Love Coins" description="Virtual only — no real money is ever charged. Earn them by checking in, going on dates and the daily hello.">
-            <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-              <VirtualWallet />
-              <div className="grid grid-cols-3 gap-2">
-                {COIN_PACKS.map((p) => (
-                  <button key={p.id} onClick={() => buy(p)} disabled={!!buying} className="card flex flex-col items-center gap-1 p-3 text-center transition hover:border-line-strong disabled:opacity-60">
-                    <span className="text-2xl" aria-hidden>{p.emoji}</span>
-                    <span className="text-xs text-cream">{p.label}</span>
-                    <CoinAmount amount={p.coins} className="text-xs text-lamp" />
-                    <span className="text-[10px] text-faint">{buying === p.id ? 'Adding…' : 'Free · demo'}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="eyebrow mb-2 mt-5">Recent</p>
-            <ul className="divide-y divide-line text-sm">
-              {transactions.slice(0, 8).map((t) => (
-                <li key={t.id} className="flex justify-between py-2">
-                  <span className="text-cream-dim">{t.reason}</span>
-                  <span className="flex gap-3">
-                    <span className="text-xs text-faint">{timeAgo(t.at)}</span>
-                    <span className={cn('tabular-nums', t.amount > 0 ? 'text-sage' : 'text-muted')}>
-                      {t.amount > 0 ? '+' : ''}
-                      {t.amount}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
           </Section>
 
           <Section id="couple" title="Couple" description="Just the two of you, always.">

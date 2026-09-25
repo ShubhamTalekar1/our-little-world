@@ -10,7 +10,6 @@ import { usePresenceStore } from '../stores/presenceStore';
 import { useMusicStore } from '../stores/musicStore';
 import { useCallStore } from '../stores/callStore';
 import { useStoryStore } from '../stores/storyStore';
-import { useWalletStore } from '../stores/walletStore';
 import { useRoomStore } from '../stores/roomStore';
 import { realtime } from '../services/realtime';
 import { EV } from '../services/realtime/events';
@@ -42,7 +41,6 @@ export default function SlowDance() {
       counted.current = true;
       useStoryStore.getState().inc('dances');
       useStoryStore.getState().recordFirst('first-dance', '💃', 'First dance', 'Nobody stepped on anybody’s toes.');
-      useWalletStore.getState().earn(30, 'A slow dance');
     }
   }, [dancing]);
 

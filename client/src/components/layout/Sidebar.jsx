@@ -4,7 +4,6 @@ import { NAV } from './nav';
 import { useChatStore } from '../../stores/chatStore';
 import { useUnopenedGifts } from '../../stores/giftStore';
 import { cn } from '../../lib/cn';
-import VirtualWallet from '../wallet/VirtualWallet';
 
 export default function Sidebar() {
   const unopened = useUnopenedGifts().length;
@@ -39,7 +38,6 @@ export default function Sidebar() {
           </li>
         ))}
       </ul>
-      <VirtualWallet className="mt-4" />
     </nav>
   );
 }

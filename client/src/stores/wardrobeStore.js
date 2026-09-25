@@ -1,26 +1,12 @@
 import { createStore } from './createStore';
 import { DEMO_MODE } from '../config/env';
 import { seedWardrobe } from '../data/mockData';
-import { CLOTHING_BY_ID } from '../catalog/avatarItems';
 import { uid } from '../lib/id';
-import { useWalletStore } from './walletStore';
 import { remote, api } from '../services/api/client';
 
 export const useWardrobeStore = createStore('wardrobe', (set, get) => ({
-  ...(DEMO_MODE ? seedWardrobe() : { unlocked: [], outfits: [] }),
+  ...(DEMO_MODE ? seedWardrobe() : { outfits: [] }),
   hydrate: (w) => set(w),
-
-  isOwned: (id) => (CLOTHING_BY_ID[id]?.price ?? 0) === 0 || get().unlocked.includes(id),
-
-  unlock(id) {
-    const item = CLOTHING_BY_ID[id];
-    if (!item || get().isOwned(id)) return { ok: true };
-    const ok = useWalletStore.getState().spend(item.price, `Unlocked ${item.name}`);
-    if (!ok) return { ok: false, reason: 'coins' };
-    set((s) => ({ unlocked: [...s.unlocked, id] }));
-    remote(() => api.post('/wardrobe/unlock', { itemId: id }));
-    return { ok: true };
-  },
 
   saveOutfit(name, emoji, items) {
     const outfit = { id: uid('o'), name: name || 'New outfit', emoji: emoji || '✨', favorite: false, items };

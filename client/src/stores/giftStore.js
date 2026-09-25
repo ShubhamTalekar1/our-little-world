@@ -5,7 +5,6 @@ import { seedGifts } from '../data/mockData';
 import { GIFTS_BY_ID, MYSTERY_POOL } from '../catalog/gifts';
 import { uid } from '../lib/id';
 import { cleanText } from '../lib/sanitize';
-import { useWalletStore } from './walletStore';
 import { realtime } from '../services/realtime';
 import { EV } from '../services/realtime/events';
 import { remote, api } from '../services/api/client';
@@ -18,8 +17,6 @@ export const useGiftStore = createStore('gifts', (set, get) => ({
   send(giftId, message, toId) {
     const gift = GIFTS_BY_ID[giftId];
     if (!gift) return { ok: false, reason: 'unknown' };
-    const paid = useWalletStore.getState().spend(gift.price, `Sent ${gift.name}`);
-    if (!paid) return { ok: false, reason: 'coins' };
     const record = { id: uid('g'), giftId, to: toId, message: cleanText(message, 200), at: new Date().toISOString() };
     set((s) => ({ sent: [record, ...s.sent] }));
     realtime.emit(EV.GIFT_SENT, { id: record.id, giftId, message: record.message });

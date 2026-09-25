@@ -14,6 +14,4 @@ export const config = {
   redisUrl: env.REDIS_URL || null,
   uploadDir: env.UPLOAD_DIR ?? new URL('../uploads/', import.meta.url).pathname,
   maxUploadBytes: 8 * 1024 * 1024,
-  startingCoins: 500,
-  dailyReward: 50,
 };

@@ -4,7 +4,6 @@ import { ah } from '../lib/errors.js';
 import { partnerOf } from '../middleware/auth.js';
 import { publicPresence } from '../realtime/presence.js';
 import { serializeNotification } from '../services/notify.js';
-import { CLOTHING_PRICES } from '../catalog.js';
 import * as S from '../services/serialize.js';
 
 const router = Router();
@@ -16,11 +15,9 @@ router.get(
     const me = req.user;
     const coupleId = req.coupleId;
     const partner = await partnerOf(me);
-    const [couple, avatars, wallet, unlocked, outfits, received, sent, room, pet, messages, memories, letters, events, countdowns, checkins, milestones, achievements, notifications] = await Promise.all([
+    const [couple, avatars, outfits, received, sent, room, pet, messages, memories, letters, events, countdowns, checkins, milestones, achievements, notifications] = await Promise.all([
       prisma.couple.findUnique({ where: { id: coupleId } }),
       prisma.avatar.findMany({ where: { user: { coupleId } } }),
-      prisma.wallet.findUnique({ where: { userId: me.id }, include: { transactions: { orderBy: { createdAt: 'desc' }, take: 50 } } }),
-      prisma.wardrobeItem.findMany({ where: { userId: me.id } }),
       prisma.outfit.findMany({ where: { userId: me.id }, orderBy: { createdAt: 'desc' } }),
       prisma.gift.findMany({ where: { coupleId, recipientId: me.id }, orderBy: { createdAt: 'desc' } }),
       prisma.gift.findMany({ where: { coupleId, senderId: me.id }, orderBy: { createdAt: 'desc' } }),
@@ -43,10 +40,9 @@ router.get(
       partner: S.person(partner) ?? { id: 'pending', name: 'Your person', pronouns: 'they', timezone: me.timezone },
       couple: S.couple(couple),
       avatars: Object.fromEntries(avatars.map((a) => [a.userId, a.config])),
-      wallet: { balance: wallet.balance, lastDailyClaim: wallet.lastDailyClaim, transactions: wallet.transactions.map((t) => ({ id: t.id, amount: t.amount, reason: t.reason, at: t.createdAt })) },
-      wardrobe: { unlocked: unlocked.map((u) => u.itemKey).filter((k) => CLOTHING_PRICES[k]), outfits: outfits.map(S.outfit) },
+      wardrobe: { outfits: outfits.map(S.outfit) },
       gifts: { received: received.map(S.giftReceived), sent: sent.map(S.giftSent) },
-      room: { environment: room.environment, owned: room.owned, placed: room.placed },
+      room: { environment: room.environment, placed: room.placed },
       pet: S.pet(pet),
       messages: messages.reverse().map(S.message),
       memories: memories.map(S.memory),

@@ -1,7 +1,6 @@
 import { api } from './client';
 import { usePeopleStore } from '../../stores/peopleStore';
 import { useAvatarStore } from '../../stores/avatarStore';
-import { useWalletStore } from '../../stores/walletStore';
 import { useWardrobeStore } from '../../stores/wardrobeStore';
 import { useGiftStore } from '../../stores/giftStore';
 import { useRoomStore } from '../../stores/roomStore';
@@ -21,7 +20,6 @@ export async function hydrateFromApi() {
   usePeopleStore.getState().hydrate(d);
   useAvatarStore.getState().hydrate(d.me.id, d.avatars);
   useChatStore.getState().setMyId(d.me.id);
-  useWalletStore.getState().hydrate(d.wallet);
   useWardrobeStore.getState().hydrate(d.wardrobe);
   useGiftStore.getState().hydrate(d.gifts);
   useRoomStore.getState().hydrate(d.room);

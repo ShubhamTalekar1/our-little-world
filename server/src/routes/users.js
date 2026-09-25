@@ -3,7 +3,6 @@ import { prisma } from '../db.js';
 import { ah } from '../lib/errors.js';
 import { validate, text, clientId, isoDate, z } from '../lib/validate.js';
 import { partnerOf } from '../middleware/auth.js';
-import { earn } from '../services/wallet.js';
 import { notify } from '../services/notify.js';
 import { emitToUser } from '../realtime/hub.js';
 import * as S from '../services/serialize.js';
@@ -48,16 +47,11 @@ router.post(
   validate(z.object({ id: clientId, mood: z.enum(MOODS), note: text(200).optional() })),
   ah(async (req, res) => {
     const day = dayIn(req.user.timezone);
-    const existing = await prisma.checkIn.findUnique({ where: { userId_day: { userId: req.user.id, day } } });
-    const c = await prisma.$transaction(async (tx) => {
-      const row = await tx.checkIn.upsert({
+    const c = await prisma.checkIn.upsert({
         where: { userId_day: { userId: req.user.id, day } },
         create: { id: req.valid.id, coupleId: req.coupleId, userId: req.user.id, day, mood: req.valid.mood, note: req.valid.note ?? '' },
         update: { mood: req.valid.mood, note: req.valid.note ?? '' },
       });
-      if (!existing) await earn(tx, req.user.id, 25, 'Daily check-in');
-      return row;
-    });
     const partner = await partnerOf(req.user);
     if (partner) {
       emitToUser(partner.id, 'checkin:new', { from: req.user.id, checkin: S.checkin(c) });

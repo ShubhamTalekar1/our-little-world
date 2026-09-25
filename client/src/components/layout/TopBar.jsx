@@ -3,7 +3,6 @@ import { Bell, Settings } from 'lucide-react';
 import Avatar from '../avatar/Avatar';
 import IconButton from '../ui/IconButton';
 import PresenceIndicator, { PresenceDot } from '../presence/PresenceIndicator';
-import VirtualWallet from '../wallet/VirtualWallet';
 import { usePeopleStore } from '../../stores/peopleStore';
 import { useAvatarStore } from '../../stores/avatarStore';
 import { usePresenceStore } from '../../stores/presenceStore';
@@ -77,7 +76,6 @@ export default function TopBar() {
               </p>
             )}
           </div>
-          <VirtualWallet compact className="lg:hidden" />
           <IconButton icon={Bell} label={`Notifications${unread ? `, ${unread} unread` : ''}`} badge={unread} onClick={() => setNotifs(true)} />
           <span className="hidden sm:block">
             <IconButton icon={Settings} label="Settings" onClick={() => navigate('/settings')} />

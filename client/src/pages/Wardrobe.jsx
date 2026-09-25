@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Save, Sparkles, Lock } from 'lucide-react';
+import { Save, Sparkles } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import Button, { ButtonLink } from '../components/ui/Button';
 import Tabs from '../components/ui/Tabs';
@@ -8,10 +8,8 @@ import EmptyState from '../components/ui/EmptyState';
 import Avatar from '../components/avatar/Avatar';
 import OutfitCard from '../components/wardrobe/OutfitCard';
 import SaveOutfitModal from '../components/wardrobe/SaveOutfitModal';
-import { CoinAmount } from '../components/wallet/VirtualWallet';
 import { useAvatarStore, useMyAvatar } from '../stores/avatarStore';
 import { useWardrobeStore } from '../stores/wardrobeStore';
-import { useWalletStore } from '../stores/walletStore';
 import { toast } from '../stores/uiStore';
 import { CLOTHING, SLOTS } from '../catalog/avatarItems';
 import { cn } from '../lib/cn';
@@ -22,8 +20,8 @@ const sameOutfit = (a = {}, b = {}) => {
   return [...keys].every((k) => (a[k] ?? null) === (b[k] ?? null));
 };
 
-/** One garment tile — equip/unequip or unlock. */
-function ClothingItem({ item, base, worn, owned, onClick, index }) {
+/** One garment tile — tap to wear or take off. */
+function ClothingItem({ item, base, worn, onClick, index }) {
   const preview = { ...base, outfit: { ...base.outfit, [item.slot]: item.id, ...(item.slot === 'dress' ? { top: undefined, bottom: undefined } : {}), ...(item.slot === 'top' || item.slot === 'bottom' ? { dress: undefined } : {}) } };
   return (
     <motion.button
@@ -35,17 +33,11 @@ function ClothingItem({ item, base, worn, owned, onClick, index }) {
       aria-pressed={worn}
       className={cn('card relative flex flex-col items-center gap-1 p-3 text-center transition hover:border-line-strong', worn && 'border-peach/50 bg-peach/[0.06]')}
     >
-      <div className={cn('grid h-24 place-items-center', !owned && 'opacity-60')}>
+      <div className="grid h-24 place-items-center">
         <Avatar config={preview} crop={CROP[item.slot]} size={92} animated={false} label={item.name} />
       </div>
       <span className="w-full truncate text-[12.5px] text-cream">{item.name}</span>
-      {owned ? (
-        <span className={cn('text-[11px]', worn ? 'text-peach' : 'text-muted')}>{worn ? 'Wearing' : 'Tap to wear'}</span>
-      ) : (
-        <span className="flex items-center gap-1 text-[11px] text-lamp">
-          <Lock className="h-3 w-3" aria-hidden /> <CoinAmount amount={item.price} />
-        </span>
-      )}
+      <span className={cn('text-[11px]', worn ? 'text-peach' : 'text-muted')}>{worn ? 'Wearing' : 'Tap to wear'}</span>
       {item.rarity === 'rare' && <Sparkles className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-lavender" aria-label="Rare" />}
     </motion.button>
   );
@@ -56,34 +48,23 @@ export default function Wardrobe() {
   const equip = useAvatarStore((s) => s.equip);
   const unequip = useAvatarStore((s) => s.unequip);
   const wearOutfit = useAvatarStore((s) => s.wearOutfit);
-  const { outfits, saveOutfit, renameOutfit, toggleFavorite, deleteOutfit, isOwned, unlock } = useWardrobeStore();
-  useWardrobeStore((s) => s.unlocked);
-  const balance = useWalletStore((s) => s.balance);
+  const { outfits, saveOutfit, renameOutfit, toggleFavorite, deleteOutfit } = useWardrobeStore();
   const [tab, setTab] = useState('outfits');
   const [slot, setSlot] = useState('all');
   const [saving, setSaving] = useState(false);
   if (!avatar) return null;
 
-  const owned = CLOTHING.filter((i) => isOwned(i.id));
-  const boutique = CLOTHING.filter((i) => !isOwned(i.id));
-  const list = (tab === 'closet' ? owned : boutique).filter((i) => slot === 'all' || i.slot === slot);
+  const list = CLOTHING.filter((i) => slot === 'all' || i.slot === slot);
   const sortedOutfits = [...outfits].sort((a, b) => Number(b.favorite) - Number(a.favorite));
 
   const onItem = (item) => {
-    if (!isOwned(item.id)) {
-      const res = unlock(item.id);
-      if (!res.ok) return toast(`${item.name} needs ${item.price} Love Coins`, { emoji: '🪙', tone: 'error' });
-      toast(`${item.name} is yours ✨`, { emoji: '🛍️' });
-      equip(item.slot, item.id);
-      return;
-    }
     if (avatar.outfit?.[item.slot] === item.id) unequip(item.slot);
     else equip(item.slot, item.id);
   };
 
   return (
     <div>
-      <PageHeader eyebrow="Wardrobe" title="What are we wearing tonight?" subtitle={`${owned.length} pieces in your closet · ${outfits.length} saved outfits`}>
+      <PageHeader eyebrow="Wardrobe" title="What are we wearing tonight?" subtitle={`${CLOTHING.length} pieces in your closet · ${outfits.length} saved outfits`}>
         <ButtonLink to="/avatar">Edit avatar</ButtonLink>
         <Button variant="primary" icon={Save} onClick={() => setSaving(true)}>
           Save current look
@@ -109,8 +90,7 @@ export default function Wardrobe() {
           <Tabs
             tabs={[
               { id: 'outfits', label: 'Outfits', emoji: '💞', count: outfits.length },
-              { id: 'closet', label: 'Closet', emoji: '👚', count: owned.length },
-              { id: 'boutique', label: 'Boutique', emoji: '🛍️', count: boutique.length },
+              { id: 'closet', label: 'Closet', emoji: '👚', count: CLOTHING.length },
             ]}
             value={tab}
             onChange={setTab}
@@ -157,19 +137,12 @@ export default function Wardrobe() {
                   </button>
                 ))}
               </div>
-              {tab === 'boutique' && (
-                <p className="mb-4 text-sm text-muted">
-                  You have <CoinAmount amount={balance} className="text-cream" /> to spend. Earn more with check-ins, dates and the daily hello.
-                </p>
-              )}
               {list.length === 0 ? (
-                <EmptyState emoji={tab === 'boutique' ? '✨' : '🧺'} title={tab === 'boutique' ? 'You own everything here' : 'Nothing here yet'}>
-                  {tab === 'boutique' ? 'Fancy. More pieces arrive with seasonal events.' : 'Unlock pieces in the boutique.'}
-                </EmptyState>
+                <EmptyState emoji="🧺" title="Nothing here yet">Try another category.</EmptyState>
               ) : (
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
                   {list.map((item, i) => (
-                    <ClothingItem key={item.id} index={i} item={item} base={avatar} owned={isOwned(item.id)} worn={avatar.outfit?.[item.slot] === item.id} onClick={() => onItem(item)} />
+                    <ClothingItem key={item.id} index={i} item={item} base={avatar} worn={avatar.outfit?.[item.slot] === item.id} onClick={() => onItem(item)} />
                   ))}
                 </div>
               )}

@@ -11,7 +11,6 @@ import users from './routes/users.js';
 import avatars from './routes/avatars.js';
 import wardrobe from './routes/wardrobe.js';
 import gifts from './routes/gifts.js';
-import wallet from './routes/wallet.js';
 import rooms from './routes/rooms.js';
 import activities from './routes/activities.js';
 import messages from './routes/messages.js';
@@ -45,7 +44,6 @@ export function createApp() {
   app.use('/api/avatars', priv, avatars);
   app.use('/api/wardrobe', priv, wardrobe);
   app.use('/api/gifts', priv, gifts);
-  app.use('/api/wallet', priv, wallet);
   app.use('/api/rooms', priv, rooms);
   app.use('/api/activities', priv, activities);
   app.use('/api/messages', priv, messages);

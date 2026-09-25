@@ -8,7 +8,6 @@ import Button, { ButtonLink } from '../components/ui/Button';
 import Room from '../components/room/Room';
 import EnvironmentPicker from '../components/room/EnvironmentPicker';
 import PetSprite from '../components/pet/PetSprite';
-import { CoinAmount } from '../components/wallet/VirtualWallet';
 import { FURNITURE } from '../catalog/furniture';
 import { PET_SPECIES, PET_ACCESSORIES, PET_FOODS } from '../catalog/pets';
 import { ACHIEVEMENTS } from '../catalog/achievements';
@@ -23,7 +22,7 @@ import { usePartnerWords } from '../lib/words';
 import { cn } from '../lib/cn';
 
 function Decorate() {
-  const { environment, owned, placed, buy, place } = useRoomStore();
+  const { environment, placed, place } = useRoomStore();
   const [decorating, setDecorating] = useState(true);
   const isBedroom = environment === 'bedroom';
   return (
@@ -47,37 +46,26 @@ function Decorate() {
         <p className="eyebrow mb-3">Furniture & little things</p>
         <ul className="grid grid-cols-2 gap-2">
           {FURNITURE.map((f) => {
-            const has = owned.includes(f.id);
             const count = placed.filter((p) => p.id === f.id).length;
             return (
               <li key={f.id}>
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={() => {
-                    if (!has) {
-                      const r = buy(f.id);
-                      if (!r.ok) return toast(`${f.name} needs ${f.price} Love Coins`, { emoji: '🪙', tone: 'error' });
-                      playSfx('success');
-                      toast(`${f.name} is yours`, { emoji: '🛋️' });
-                    }
                     if (f.special && count > 0) return toast('Already twinkling ✨', { emoji: '💡' });
                     place(f.id);
                     if (!isBedroom) toast('Placed in your room', { emoji: f.emoji.length < 3 ? f.emoji : '✨' });
                   }}
                   className="card flex w-full flex-col items-center gap-1 p-3 text-center transition hover:border-line-strong"
-                  aria-label={has ? `Place ${f.name}` : `Buy ${f.name} for ${f.price} coins`}
+                  aria-label={`Place ${f.name}`}
                 >
                   <span className="text-3xl" aria-hidden>
                     {f.id === 'lamp' ? '🏮' : f.id === 'fairy' ? '✨' : f.emoji}
                   </span>
                   <span className="text-[12px] text-cream">{f.name}</span>
-                  {has ? (
-                    <span className="flex items-center gap-1 text-[11px] text-muted">
-                      <Plus className="h-3 w-3" /> place {count > 0 && `· ${count} out`}
-                    </span>
-                  ) : (
-                    <CoinAmount amount={f.price} className="text-[11px] text-lamp" />
-                  )}
+                  <span className="flex items-center gap-1 text-[11px] text-muted">
+                    <Plus className="h-3 w-3" /> place {count > 0 && `· ${count} out`}
+                  </span>
                 </motion.button>
               </li>
             );
@@ -89,7 +77,7 @@ function Decorate() {
 }
 
 function PetCorner() {
-  const { pet, adopt, feed, play, rename, setAccessory, buyAccessory } = usePetStore();
+  const { pet, adopt, feed, play, rename, setAccessory } = usePetStore();
   const [species, setSpecies] = useState('cat');
   const [name, setName] = useState('');
   const [bounce, setBounce] = useState(0);
@@ -189,13 +177,12 @@ function PetCorner() {
               key={f.id}
               size="sm"
               onClick={() => {
-                const r = feed(f.id);
-                if (!r.ok) return toast('Not enough Love Coins', { emoji: '🪙', tone: 'error' });
+                feed(f.id);
                 setBounce((b) => b + 1);
                 toast(`${pet.name} loved the ${f.name.toLowerCase()}`, { emoji: f.emoji });
               }}
             >
-              {f.emoji} {f.name} <CoinAmount amount={f.price} className="text-[11px] text-muted" />
+              {f.emoji} {f.name}
             </Button>
           ))}
           <Button
@@ -215,24 +202,15 @@ function PetCorner() {
           <p className="eyebrow mb-3">Dress {pet.name}</p>
           <div className="grid grid-cols-3 gap-2">
             {PET_ACCESSORIES.map((a) => {
-              const has = pet.ownedAccessories.includes(a.id);
               return (
                 <button
                   key={a.id}
-                  onClick={() => {
-                    if (!has) {
-                      const r = buyAccessory(a.id);
-                      if (!r.ok) return toast(`${a.name} needs ${a.price} Love Coins`, { emoji: '🪙', tone: 'error' });
-                      return toast(`${pet.name} looks adorable`, { emoji: '✨' });
-                    }
-                    setAccessory(a.id);
-                  }}
+                  onClick={() => setAccessory(a.id)}
                   aria-pressed={pet.accessory === a.id}
                   className={cn('flex flex-col items-center rounded-2xl p-2 transition', pet.accessory === a.id ? 'bg-peach/15 ring-1 ring-peach/50' : 'bg-surface-2/60 hover:bg-surface-3')}
                 >
                   <PetSprite species={pet.species} accessory={a.id} size={56} />
                   <span className="text-[11px] text-cream-dim">{a.name}</span>
-                  {!has && <CoinAmount amount={a.price} className="text-[10px] text-lamp" />}
                 </button>
               );
             })}

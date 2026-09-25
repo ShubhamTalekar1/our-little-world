@@ -14,7 +14,6 @@ import { EV } from '../services/realtime/events';
 import { parseYouTubeId } from '../services/movie/youtube';
 import { useCallStore } from '../stores/callStore';
 import { useStoryStore } from '../stores/storyStore';
-import { useWalletStore } from '../stores/walletStore';
 import { useActivityStore } from '../stores/activityStore';
 import { usePresenceStore } from '../stores/presenceStore';
 import { toast } from '../stores/uiStore';
@@ -141,7 +140,6 @@ export default function MovieNight() {
       counted.current = true;
       useStoryStore.getState().inc('movies');
       useStoryStore.getState().recordFirst('first-movie', '🎬', 'First movie', `${source.title}, together.`);
-      useWalletStore.getState().earn(20, 'Movie night together');
     }
   };
 
