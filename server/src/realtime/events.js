@@ -24,6 +24,7 @@ export const RELAY = new Set([
   'movie:play',
   'movie:pause',
   'movie:seek',
+  'movie:state',
   'movie:reaction',
   'call:reaction',
   'music:play',

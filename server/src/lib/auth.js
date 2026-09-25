@@ -9,7 +9,7 @@ export const signToken = (user) => jwt.sign({ sub: user.id, v: user.tokenVersion
 export const verifyToken = (token) => jwt.verify(token, config.jwtSecret);
 
 export const COOKIE = 'olw_session';
-export const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: config.isProd, maxAge: 30 * 24 * 3600 * 1000, path: '/' };
+export const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: 30 * 24 * 3600 * 1000, path: '/' };
 
 export function tokenFrom(req) {
   const h = req.headers.authorization;

@@ -7,6 +7,7 @@ import { io as connect } from 'socket.io-client';
 import { createApp } from '../src/app.js';
 import { attachRealtime } from '../src/realtime/socket.js';
 import { prisma } from '../src/db.js';
+import { config } from '../src/config.js';
 
 let server;
 let io;
@@ -158,4 +159,22 @@ test('uploads are checked by content, not name', async () => {
   assert.equal(own.status, 200);
   const other = await fetch(`${base}${up.data.url}`, { headers: { Authorization: `Bearer ${C.token}` } });
   assert.equal(other.status, 404);
+});
+
+test('locked features are closed on the server too', async () => {
+  const saved = { features: config.features, relationship: config.relationship };
+  config.features = new Set(['chat', 'movie']);
+  config.relationship = 'friends';
+  try {
+    assert.equal((await call('GET', '/gifts', { token: A.token })).status, 403);
+    assert.equal((await call('GET', '/letters', { token: A.token })).status, 403);
+    assert.equal((await call('GET', '/memories', { token: A.token })).status, 403);
+    const msg = await call('POST', '/messages', { token: A.token, body: { type: 'text', text: 'hi friend' } });
+    assert.equal(msg.status, 201);
+    const ice = await call('GET', '/rtc/ice-servers', { token: A.token });
+    assert.equal(ice.status, 200);
+    assert.ok(ice.data.iceServers.length >= 1);
+  } finally {
+    Object.assign(config, saved);
+  }
 });

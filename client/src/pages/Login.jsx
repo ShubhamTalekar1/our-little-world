@@ -24,7 +24,7 @@ export default function Login() {
       <motion.form onSubmit={submit} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass w-full max-w-sm rounded-4xl p-7 shadow-soft">
         <p className="eyebrow">Our little world</p>
         <h1 className="mt-2 text-3xl font-light text-cream">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted">Someone’s been waiting for you.</p>
+        <p className="mt-1 text-sm text-muted">Good to see you again.</p>
         <div className="mt-6 flex flex-col gap-3">
           <div>
             <label htmlFor="email" className="eyebrow mb-1.5 block">Email</label>

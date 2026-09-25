@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
@@ -29,11 +29,11 @@ export default function AppShell() {
         <DemoBanner />
         <main id="main" className={`mx-auto w-full flex-1 ${immersive ? 'max-w-7xl px-3 py-4 sm:px-6' : 'max-w-6xl px-4 py-6 sm:px-6 sm:py-8'} pb-32 lg:pb-12`}>
           <Suspense fallback={<Spinner label="Opening the door" />}>
-            <AnimatePresence mode="wait">
-              <motion.div key={location.pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease: 'easeOut' }}>
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            {/* Enter-only page transition. (An exit animation with AnimatePresence could
+                remount the current page later on — e.g. mid-movie — resetting it.) */}
+            <motion.div key={location.pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }}>
+              <Outlet />
+            </motion.div>
           </Suspense>
         </main>
       </div>

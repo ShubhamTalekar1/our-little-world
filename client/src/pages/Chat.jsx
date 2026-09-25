@@ -6,6 +6,7 @@ import { ButtonLink } from '../components/ui/Button';
 import { usePeopleStore } from '../stores/peopleStore';
 import { useAvatarStore } from '../stores/avatarStore';
 import { usePartnerWords } from '../lib/words';
+import { isEnabled, FRIENDS } from '../config/features';
 
 export default function Chat() {
   const partner = usePeopleStore((s) => s.partner);
@@ -21,14 +22,23 @@ export default function Chat() {
           <h1 className="truncate font-display text-lg text-cream">Talk to {w.them}</h1>
           <PresenceIndicator className="truncate text-xs" />
         </div>
-        <span className="hidden sm:block">
-          <ButtonLink to="/letters?write=1" size="sm" icon={Mail}>
-            Write a letter
+        {isEnabled('letters') && (
+          <span className="hidden sm:block">
+            <ButtonLink to="/letters?write=1" size="sm" icon={Mail}>
+              Write a letter
+            </ButtonLink>
+          </span>
+        )}
+        {isEnabled('call') && (
+          <ButtonLink to="/together/call" size="sm" variant="primary" icon={Video} aria-label="Video call">
+            <span className="hidden sm:inline">{FRIENDS ? 'Video call' : 'Come sit with me'}</span>
           </ButtonLink>
-        </span>
-        <ButtonLink to="/together/call" size="sm" variant="primary" icon={Video} aria-label="Come sit with me — video call">
-          <span className="hidden sm:inline">Come sit with me</span>
-        </ButtonLink>
+        )}
+        {isEnabled('movie') && (
+          <ButtonLink to="/together/movie" size="sm" variant="primary" aria-label="Movie night">
+            🎬 <span className="hidden sm:inline">Movie night</span>
+          </ButtonLink>
+        )}
       </div>
       <ChatPanel className="flex-1" />
     </div>

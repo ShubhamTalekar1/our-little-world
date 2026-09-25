@@ -3,6 +3,7 @@ import { PARTNER_ID } from '../../data/demoWorld';
 import { GIFTS, GIFT_MESSAGES } from '../../catalog/gifts';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { uid } from '../../lib/id';
+import { FRIENDS, INTERACTIONS_ALLOWED } from '../../config/features';
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -16,6 +17,16 @@ const REPLIES = [
   [/\?$/, ['hmm… yes. definitely yes', 'ask me again on call', 'depends. are you being cute about it?']],
   [/haha|lol|😂/i, ['😂😂', 'stop I’m laughing in public']],
 ];
+const FRIEND_REPLIES = [
+  [/movie|film|watch/i, ['yes!! give me two minutes 🍿', 'only if you don’t talk during the good parts', 'what are we watching?']],
+  [/sleep|tired|night/i, ['go sleep lol, talk tomorrow 🌙', 'same, today was long']],
+  [/morning|coffee/i, ['good morning ☀️', 'coffee first, thoughts later']],
+  [/food|eat|dinner|lunch/i, ['did you actually eat or just coffee', 'I made pasta, it was elite 🍝']],
+  [/\?$/, ['hmm… yes, probably', 'depends 😂', 'good question honestly']],
+  [/haha|lol|😂/i, ['😂😂', 'stop I’m laughing in public']],
+];
+const FRIEND_DEFAULT = ['haha tell me more', 'wait really?', 'okay that’s actually funny', 'same tbh', 'nice 👀', 'what else is new'];
+
 const DEFAULT_REPLIES = [
   'tell me more 🤍',
   'this is why I like you',
@@ -61,9 +72,9 @@ export class DemoPartner {
     // A little welcome gift so the gift-opening moment happens early.
     this.schedule(16000, () => {
       if (!this.spontaneous) return;
-      this.sendGift(pick(['rose', 'tulip', 'coffee', 'stars', 'mystery']));
+      if (!FRIENDS) this.sendGift(pick(['rose', 'tulip', 'coffee', 'stars', 'mystery']));
     });
-    this.schedule(45000, () => this.spontaneous && this.deliver(EV.INTERACTION, { type: pick(['wave', 'love']) }));
+    this.schedule(45000, () => this.spontaneous && this.deliver(EV.INTERACTION, { type: pick(FRIENDS ? INTERACTIONS_ALLOWED : ['wave', 'love']) }));
     // Drift between activities now and then.
     this.presenceLoop = setInterval(() => {
       if (!this.spontaneous || this.inCall) return;
@@ -75,9 +86,9 @@ export class DemoPartner {
     this.affectionLoop = setInterval(() => {
       if (!this.spontaneous) return;
       const r = Math.random();
-      if (r < 0.35) this.deliver(EV.INTERACTION, { type: pick(['love', 'wave', 'kiss', 'hug']) });
-      else if (r < 0.5) this.say(pick(['thinking about you', 'what are you doing rn', 'hi 🤍', 'I just looked at our memory wall again']));
-      else if (r < 0.58) this.sendGift(pick(['heart', 'coffee', 'tulip', 'letter', 'chocolate']));
+      if (r < 0.35) this.deliver(EV.INTERACTION, { type: pick(FRIENDS ? INTERACTIONS_ALLOWED : ['love', 'wave', 'kiss', 'hug']) });
+      else if (r < 0.5) this.say(pick(FRIENDS ? ['what are you up to', 'movie later?', 'hiii', 'you won’t believe what happened today'] : ['thinking about you', 'what are you doing rn', 'hi 🤍', 'I just looked at our memory wall again']));
+      else if (r < 0.58 && !FRIENDS) this.sendGift(pick(['heart', 'coffee', 'tulip', 'letter', 'chocolate']));
     }, 150000);
   }
 
@@ -108,9 +119,10 @@ export class DemoPartner {
         const text = payload.message?.text ?? '';
         if (payload.message?.type === 'image') return this.say(pick(['omg look at you 🥹', 'saving this forever', 'wait send more']), 1200);
         if (payload.message?.type === 'voice') return this.say(pick(['your voice 🥹', 'play that again (I did, 4 times)']), 1400);
-        if (Math.random() < 0.3) this.schedule(1500, () => this.deliver(EV.CHAT_REACTION, { id: payload.message.id, emoji: pick(['❤️', '🥰', '😂']) }));
-        const match = REPLIES.find(([re]) => re.test(text));
-        this.say(pick(match ? match[1] : DEFAULT_REPLIES), 1200 + Math.random() * 1500);
+        if (Math.random() < 0.3) this.schedule(1500, () => this.deliver(EV.CHAT_REACTION, { id: payload.message.id, emoji: pick(FRIENDS ? ['😂', '👍', '🔥'] : ['❤️', '🥰', '😂']) }));
+        const set = FRIENDS ? FRIEND_REPLIES : REPLIES;
+        const match = set.find(([re]) => re.test(text));
+        this.say(pick(match ? match[1] : FRIENDS ? FRIEND_DEFAULT : DEFAULT_REPLIES), 1200 + Math.random() * 1500);
         break;
       }
       case EV.GIFT_SENT: {
@@ -123,6 +135,7 @@ export class DemoPartner {
       }
       case EV.INTERACTION: {
         const back = { hug: 'hug', kiss: 'kiss', wave: 'wave', love: 'love', highfive: 'highfive', pat: 'love' }[payload.type];
+        if (FRIENDS && !INTERACTIONS_ALLOWED.includes(back)) break;
         if (back && Math.random() < 0.8) this.schedule(3600 + Math.random() * 1500, () => this.deliver(EV.INTERACTION, { type: back }));
         break;
       }

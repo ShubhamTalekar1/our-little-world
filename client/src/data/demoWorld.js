@@ -2,13 +2,14 @@
 // There is no pre-filled history — messages, memories, gifts, plans and
 // everything else start empty and fill up with what you actually do.
 import { AVATAR_ME, AVATAR_HER } from './defaultAvatars';
+import { FRIENDS } from '../config/features';
 
 export const ME_ID = 'u_me';
 export const PARTNER_ID = 'u_partner';
 
 export const initialPeople = () => ({
   me: { id: ME_ID, name: 'You', pronouns: 'they', email: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-  partner: { id: PARTNER_ID, name: 'Your person', pronouns: 'they', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+  partner: { id: PARTNER_ID, name: FRIENDS ? 'Your friend' : 'Your person', pronouns: 'they', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
   couple: { id: 'c_demo', name: 'Our little world', since: new Date().toISOString(), anniversary: new Date().toISOString(), inviteCode: '' },
 });
 

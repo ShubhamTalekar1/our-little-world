@@ -11,6 +11,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useClock } from '../room/effects';
 import { daysBetween } from '../../lib/time';
 import { usePartnerWords } from '../../lib/words';
+import { FRIENDS } from '../../config/features';
 
 function fmt(date, tz) {
   try {
@@ -57,9 +58,9 @@ export default function TopBar() {
           <CoupleBadge />
           <div className="min-w-0">
             <p className="truncate font-display text-[15px] text-cream">
-              {me?.name} <span className="text-peach" aria-label="and">❤︎</span> {partner?.name}
+              {me?.name} <span className="text-peach" aria-label="and">{FRIENDS ? '&' : '❤︎'}</span> {partner?.name}
             </p>
-            <p className="truncate text-[11.5px] text-muted">Together for {days} days</p>
+            <p className="truncate text-[11.5px] text-muted">{FRIENDS ? 'Our little world' : `Together for ${days} days`}</p>
           </div>
         </Link>
         <div className="mx-auto hidden md:block">

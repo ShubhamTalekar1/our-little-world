@@ -9,6 +9,8 @@
     "server": "npm --prefix server run dev",
     "db:up": "docker compose up -d",
     "db:migrate": "npm --prefix server run db:deploy",
-    "test": "npm --prefix server test"
+    "test": "npm --prefix server test",
+    "build:prod": "npm --prefix client ci && npm --prefix client run build && rm -rf server/public && cp -r client/dist server/public && npm --prefix server ci && npm --prefix server run db:generate",
+    "start": "npm --prefix server run db:deploy && npm --prefix server start"
   }
 }

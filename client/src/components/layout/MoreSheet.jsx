@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { NAV, MOBILE_PRIMARY } from './nav';
+import { Lock } from 'lucide-react';
+import { NAV, NAV_LOCKED, MOBILE_PRIMARY } from './nav';
 import { useUiStore } from '../../stores/uiStore';
 
 export default function MoreSheet() {
@@ -38,6 +39,22 @@ export default function MoreSheet() {
                 </motion.div>
               ))}
             </div>
+            {NAV_LOCKED.length > 0 && (
+              <>
+                <p className="eyebrow mb-2 mt-6 px-1">Coming later</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {NAV_LOCKED.map(({ to, label, icon: Icon }) => (
+                    <div key={to} className="flex flex-col items-center gap-2 p-3 text-center text-[12px] text-faint" aria-disabled="true">
+                      <span className="relative grid h-12 w-12 place-items-center rounded-2xl bg-surface-2/50 ring-1 ring-line">
+                        <Icon className="h-5 w-5" aria-hidden />
+                        <Lock className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-ink p-0.5" aria-label="locked" />
+                      </span>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}

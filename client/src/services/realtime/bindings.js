@@ -1,5 +1,8 @@
 import { realtime } from './index';
 import { DEMO_MODE } from '../../config/env';
+import { isEnabled, INTERACTIONS_ALLOWED, FRIENDS } from '../../config/features';
+
+const INVITE_FEATURE = { movie: 'movie', dance: 'dance', date: 'date', call: 'call', music: 'music' };
 import { EV } from './events';
 import { GIFTS_BY_ID } from '../../catalog/gifts';
 import { INTERACTIONS_BY_ID } from '../../catalog/interactions';
@@ -45,12 +48,23 @@ export function bindRealtime() {
   const offs = [];
   const on = (e, fn) => offs.push(realtime.on(e, fn));
 
+  // The second person just used the invite: load them in without a reload.
+  on('partner:joined', ({ partner }) => {
+    import('../api/bootstrap')
+      .then((m) => m.hydrateFromApi())
+      .then(() => {
+        useUiStore.getState().toast(`${partner?.name ?? 'Your friend'} just joined your world!`, { emoji: '🎉' });
+        playSfx('success');
+      })
+      .catch((e) => console.warn('Couldn’t load the new arrival', e));
+  });
+
   on(EV.USER_ONLINE, ({ activity }) => {
     const prev = usePresenceStore.getState().partner;
     usePresenceStore.getState().setPartner({ status: 'online', activity: activity ?? { type: 'room' } });
     if (prev.status === 'offline') {
       const w = partnerWords();
-      useUiStore.getState().toast(`${w.Subject} ${w.is} here`, { emoji: '🤍' });
+      useUiStore.getState().toast(`${w.Subject} ${w.is} here`, { emoji: FRIENDS ? '👋' : '🤍' });
       // Only leave a notification after a real absence, not every reconnect.
       const away = Date.now() - new Date(prev.lastSeen ?? 0).getTime();
       if (away > 30 * 60_000) notify('presence', { type: 'presence', title: `${w.Subject} came online`, body: 'Say hi 👋', link: '/' }, null);
@@ -63,6 +77,7 @@ export function bindRealtime() {
   on(EV.PRESENCE_UPDATE, ({ status, activity }) => usePresenceStore.getState().setPartner({ status: status ?? 'online', activity }));
 
   on(EV.GIFT_RECEIVED, (g) => {
+    if (!isEnabled('gifts')) return;
     const gift = useGiftStore.getState().receive(g);
     if (!gift) return;
     const w = partnerWords();
@@ -95,7 +110,7 @@ export function bindRealtime() {
 
   on(EV.INTERACTION, ({ type }) => {
     const ix = INTERACTIONS_BY_ID[type];
-    if (!ix) return;
+    if (!ix || !INTERACTIONS_ALLOWED.includes(type)) return;
     useUiStore.getState().playInteraction(type, 'partner');
     const w = partnerWords();
     useUiStore.getState().toast(`${w.Subject} ${ix.verb}`, { emoji: ix.emoji });
@@ -104,6 +119,7 @@ export function bindRealtime() {
   });
 
   on(EV.ACTIVITY_INVITE, (inv) => {
+    if (!isEnabled(INVITE_FEATURE[inv.type])) return;
     const w = partnerWords();
     const copy = INVITE_COPY[inv.type]?.(w) ?? { title: `${w.Subject} invited you`, link: '/together' };
     useActivityStore.getState().receiveInvite(inv);
@@ -133,21 +149,25 @@ export function bindRealtime() {
   });
 
   on(EV.LETTER_SENT, ({ letter }) => {
+    if (!isEnabled('letters')) return;
     useLetterStore.getState().receive(letter);
     notify('letters', { type: 'letter', title: 'A letter arrived 💌', body: letter.title, link: '/letters' }, 'notification');
   });
   on(EV.MEMORY_ADDED, ({ memory }) => {
+    if (!isEnabled('memories')) return;
     useMemoryStore.getState().receive(memory);
     notify(null, { type: 'memory', title: 'New memory on the wall 📸', body: memory.caption, link: '/memories' });
   });
   on(EV.MEMORY_REACTION, ({ id, emoji, from }) => id && useMemoryStore.getState().react(id, from, emoji, false));
   on(EV.CHECKIN_NEW, ({ checkin }) => {
+    if (!isEnabled('dates')) return;
     useCheckinStore.getState().receive(checkin);
     const w = partnerWords();
     const mood = MOODS_BY_ID[checkin.mood];
     notify(null, { type: 'checkin', title: `${w.Theyre} feeling ${mood?.emoji} ${mood?.label} today`, body: checkin.note, link: '/dates' });
   });
   on(EV.EVENT_CREATED, ({ event }) => {
+    if (!isEnabled('dates')) return;
     useCalendarStore.getState().receiveEvent(event);
     notify('reminders', { type: 'event', title: `New plan: ${event.title} ${event.emoji ?? ''}`, body: new Date(event.at).toLocaleString(), link: '/dates' });
   });

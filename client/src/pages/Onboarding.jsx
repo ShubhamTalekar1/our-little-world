@@ -13,9 +13,10 @@ import { useAvatarStore } from '../stores/avatarStore';
 import { toast } from '../stores/uiStore';
 import { AVATAR_ME, AVATAR_HER } from '../data/defaultAvatars';
 import { DEMO_MODE } from '../config/env';
-import { makeInviteCode, normalizeInviteCode } from '../lib/inviteCode';
+import { makeInviteCode, normalizeInviteCode, isInviteCode, INVITE_EXAMPLE } from '../lib/inviteCode';
 import { api } from '../services/api/client';
 import { cn } from '../lib/cn';
+import { FRIENDS } from '../config/features';
 
 function Backdrop({ dim = 0.6 }) {
   return (
@@ -110,7 +111,7 @@ export default function Onboarding({ joining = false }) {
         <p className="mt-6 text-sm text-muted">
           Have an invite code?{' '}
           <Link to="/join" className="text-peach hover:underline">
-            Join your person
+            {FRIENDS ? 'Join your friend' : 'Join your person'}
           </Link>
           {!DEMO_MODE && (
             <>
@@ -165,7 +166,7 @@ export default function Onboarding({ joining = false }) {
         <h1 className="mt-2 text-4xl font-light text-cream">Find your person.</h1>
         <p className="mt-3 text-muted">Enter the code they gave you.</p>
         <label htmlFor="ob-code" className="sr-only">Invite code</label>
-        <input id="ob-code" className="field mt-6 text-center font-mono text-xl tracking-[0.3em] uppercase" placeholder="LOVE-XXXX" value={code} onChange={(e) => setCode(e.target.value)} />
+        <input id="ob-code" className="field mt-6 text-center font-mono text-xl tracking-[0.3em] uppercase" placeholder={INVITE_EXAMPLE.replace('7K4P', 'XXXX')} value={code} onChange={(e) => setCode(e.target.value)} />
         <div className="mt-4 grid grid-cols-2 gap-3 text-left">
           <div>
             <label htmlFor="ob-pn" className="eyebrow mb-1.5 block">Their name</label>
@@ -183,7 +184,7 @@ export default function Onboarding({ joining = false }) {
         {error && <p className="mt-3 text-sm text-rose" role="alert">{error}</p>}
         <div className="mt-8 flex justify-between">
           <Button variant="ghost" icon={ArrowLeft} onClick={back}>Back</Button>
-          <Button variant="primary" onClick={() => (!DEMO_MODE && !normalizeInviteCode(code).match(/^LOVE-[A-Z0-9]{4}$/) ? setError('That code should look like LOVE-7K4P') : (setError(null), next()))}>
+          <Button variant="primary" onClick={() => (!DEMO_MODE && !isInviteCode(code) ? setError(`That code should look like ${INVITE_EXAMPLE}`) : (setError(null), next()))}>
             Join our world <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -191,7 +192,7 @@ export default function Onboarding({ joining = false }) {
     ) : (
       <motion.div key="invite" {...fade} className="mx-auto max-w-md text-center">
         <p className="eyebrow">Step two</p>
-        <h1 className="mt-2 text-4xl font-light text-cream">Invite your person.</h1>
+        <h1 className="mt-2 text-4xl font-light text-cream">{FRIENDS ? 'Invite your friend.' : 'Invite your person.'}</h1>
         <p className="mt-3 text-muted">This world only ever has room for two. Send them this code:</p>
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: 'spring' }} className="glass mx-auto mt-6 rounded-3xl px-6 py-5">
           <p className="font-mono text-3xl tracking-[0.25em] text-cream">{inviteCode}</p>
@@ -218,10 +219,12 @@ export default function Onboarding({ joining = false }) {
             </select>
           </div>
         </div>
-        <div className="mt-3 text-left">
-          <label htmlFor="ob-since" className="eyebrow mb-1.5 block">Together since</label>
-          <input id="ob-since" type="date" className="field" value={since} max={new Date().toISOString().slice(0, 10)} onChange={(e) => e.target.value && setSince(e.target.value)} />
-        </div>
+        {!FRIENDS && (
+          <div className="mt-3 text-left">
+            <label htmlFor="ob-since" className="eyebrow mb-1.5 block">Together since</label>
+            <input id="ob-since" type="date" className="field" value={since} max={new Date().toISOString().slice(0, 10)} onChange={(e) => e.target.value && setSince(e.target.value)} />
+          </div>
+        )}
         {DEMO_MODE && <p className="mt-4 text-xs text-muted">In the demo, a simulated person joins right away so you can look around.</p>}
         <div className="mt-8 flex justify-between">
           <Button variant="ghost" icon={ArrowLeft} onClick={back}>Back</Button>
@@ -236,21 +239,21 @@ export default function Onboarding({ joining = false }) {
     <motion.div key="memories" {...fade} className="flex min-h-[70dvh] flex-col items-center justify-center text-center">
       <div className="relative flex items-end gap-2">
         <motion.div initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 60 }}>
-          <Avatar config={avatar} size={230} pose="hug" expression="love" />
+          <Avatar config={avatar} size={230} pose={FRIENDS ? 'wave' : 'hug'} expression={FRIENDS ? 'happy' : 'love'} />
         </motion.div>
         <motion.div initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.35, type: 'spring', stiffness: 60 }}>
-          <Avatar config={joining ? AVATAR_ME : AVATAR_HER} size={230} pose="hug" expression="love" flip />
+          <Avatar config={joining ? AVATAR_ME : AVATAR_HER} size={230} pose={FRIENDS ? 'wave' : 'hug'} expression={FRIENDS ? 'happy' : 'love'} flip />
         </motion.div>
-        {['❤️', '✨', '🤍'].map((h, i) => (
+        {(FRIENDS ? ['🍿', '✨', '🎬'] : ['❤️', '✨', '🤍']).map((h, i) => (
           <motion.span key={i} className="absolute left-1/2 text-2xl" style={{ top: 10 }} initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 1, 0], y: -70, x: (i - 1) * 30 }} transition={{ delay: 1 + i * 0.3, duration: 2.2, repeat: Infinity, repeatDelay: 1.5 }} aria-hidden>
             {h}
           </motion.span>
         ))}
       </div>
-      <h1 className="mt-8 text-5xl font-light text-cream">Now make some memories.</h1>
-      <p className="mt-3 max-w-md text-muted">Movies, slow dances, silly gifts and letters for later. It’s all waiting.</p>
+      <h1 className="mt-8 text-5xl font-light text-cream">{FRIENDS ? 'Grab some popcorn.' : 'Now make some memories.'}</h1>
+      <p className="mt-3 max-w-md text-muted">{FRIENDS ? 'Movie nights and long chats — more will open up later.' : 'Movies, slow dances, silly gifts and letters for later. It’s all waiting.'}</p>
       <Button variant="primary" size="lg" className="mt-8" onClick={finish} data-autofocus>
-        Enter our world ❤️
+        {FRIENDS ? 'Come in' : 'Enter our world ❤️'}
       </Button>
     </motion.div>,
   ];

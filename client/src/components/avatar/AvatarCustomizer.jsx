@@ -9,6 +9,10 @@ import {
   BROW_STYLES, NOSE_STYLES, MOUTH_STYLES, FACE_EXTRAS, CLOTHING, SLOTS, THEMED_OUTFITS,
 } from '../../catalog/avatarItems';
 import { cn } from '../../lib/cn';
+import { FRIENDS } from '../../config/features';
+
+// Couple-coded looks stay out of friends mode.
+const LOOKS = THEMED_OUTFITS.filter((t) => !FRIENDS || !['date-night', 'matching'].includes(t.id));
 
 const TABS = [
   { id: 'body', label: 'Body', emoji: '🧍' },
@@ -256,7 +260,7 @@ export default function AvatarCustomizer({ value, onChange, tabs = TABS.map((t) 
 
         {tab === 'looks' && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {THEMED_OUTFITS.flatMap((t) =>
+            {LOOKS.flatMap((t) =>
               ['feminine', 'masculine'].map((v) => {
                 const items = t.variants[v];
                 return (

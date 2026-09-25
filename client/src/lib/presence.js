@@ -1,5 +1,6 @@
 import { ENV_BY_ID } from '../catalog/environments';
 import { timeAgo } from './time';
+import { FRIENDS } from '../config/features';
 
 export function presenceLabel(presence, w) {
   if (!presence || presence.status === 'offline') return `${w.Subject} ${w.was} here ${timeAgo(presence?.lastSeen ?? Date.now())}`;
@@ -8,7 +9,7 @@ export function presenceLabel(presence, w) {
   switch (a.type) {
     case 'room':
       if (a.detail && a.detail !== 'bedroom') return `${w.Theyre} ${ENV_BY_ID[a.detail]?.presence ?? 'somewhere nice'} ${ENV_BY_ID[a.detail]?.emoji ?? ''}`;
-      return `${w.Theyre} here with you 🤍`;
+      return FRIENDS ? `${w.Theyre} here 👋` : `${w.Theyre} here with you 🤍`;
     case 'movie':
       return `${w.Theyre} watching a movie 🎬`;
     case 'dance':
@@ -26,7 +27,7 @@ export function presenceLabel(presence, w) {
     case 'date':
       return `${w.Theyre} on a date with you 🌃`;
     case 'call':
-      return `${w.Theyre} sitting with you ❤️`;
+      return FRIENDS ? `${w.Theyre} on a video call with you 📹` : `${w.Theyre} sitting with you ❤️`;
     case 'gifts':
       return `${w.Theyre} up to something 🎁`;
     default:

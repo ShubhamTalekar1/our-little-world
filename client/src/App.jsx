@@ -6,6 +6,7 @@ import Toaster from './components/ui/Toaster';
 import Spinner from './components/ui/Spinner';
 import { useAuthStore } from './stores/authStore';
 import { useSettingsStore } from './stores/settingsStore';
+import FeatureGate from './components/layout/FeatureGate';
 
 const Home = lazy(() => import('./pages/Home'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
@@ -55,21 +56,21 @@ export default function App() {
             }
           >
             <Route index element={<Home />} />
-            <Route path="avatar" element={<AvatarPage />} />
-            <Route path="wardrobe" element={<Wardrobe />} />
-            <Route path="gifts" element={<Gifts />} />
-            <Route path="chat" element={<Chat />} />
+            <Route path="avatar" element={<FeatureGate name="avatar"><AvatarPage /></FeatureGate>} />
+            <Route path="wardrobe" element={<FeatureGate name="wardrobe"><Wardrobe /></FeatureGate>} />
+            <Route path="gifts" element={<FeatureGate name="gifts"><Gifts /></FeatureGate>} />
+            <Route path="chat" element={<FeatureGate name="chat"><Chat /></FeatureGate>} />
             <Route path="together" element={<Together />} />
-            <Route path="together/movie" element={<MovieNight />} />
-            <Route path="together/dance" element={<SlowDance />} />
-            <Route path="together/music" element={<MusicRoom />} />
-            <Route path="together/call" element={<CallRoom />} />
-            <Route path="date-night" element={<DateNight />} />
-            <Route path="memories" element={<Memories />} />
-            <Route path="letters" element={<Letters />} />
-            <Route path="dates" element={<Dates />} />
-            <Route path="world" element={<OurWorld />} />
-            <Route path="story" element={<Story />} />
+            <Route path="together/movie" element={<FeatureGate name="movie"><MovieNight /></FeatureGate>} />
+            <Route path="together/dance" element={<FeatureGate name="dance"><SlowDance /></FeatureGate>} />
+            <Route path="together/music" element={<FeatureGate name="music"><MusicRoom /></FeatureGate>} />
+            <Route path="together/call" element={<FeatureGate name="call"><CallRoom /></FeatureGate>} />
+            <Route path="date-night" element={<FeatureGate name="date"><DateNight /></FeatureGate>} />
+            <Route path="memories" element={<FeatureGate name="memories"><Memories /></FeatureGate>} />
+            <Route path="letters" element={<FeatureGate name="letters"><Letters /></FeatureGate>} />
+            <Route path="dates" element={<FeatureGate name="dates"><Dates /></FeatureGate>} />
+            <Route path="world" element={<FeatureGate name="world"><OurWorld /></FeatureGate>} />
+            <Route path="story" element={<FeatureGate name="story"><Story /></FeatureGate>} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Route>

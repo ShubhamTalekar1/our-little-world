@@ -8,3 +8,6 @@ server/uploads/*
 !server/uploads/.gitkeep
 server/src/generated/
 dist-real/
+!.env.prod.example
+.env.prod
+server/public/

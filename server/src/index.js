@@ -10,6 +10,8 @@ attachRealtime(server);
 server.listen(config.port, () => {
   console.log(`🌙 Our Little World API listening on http://localhost:${config.port}`);
   if (!config.redisUrl) console.log('   presence: in-memory (set REDIS_URL to use Redis)');
+  console.log(config.staticDir ? `   serving the web app from ${config.staticDir}` : '   API only (no built web app found)');
+  console.log(`   mode: ${config.relationship} · open features: ${[...config.features].join(', ')}`);
 });
 
 const shutdown = async () => {

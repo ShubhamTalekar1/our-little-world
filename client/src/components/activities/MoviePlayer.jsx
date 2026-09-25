@@ -7,7 +7,7 @@ import { loadYouTubeApi } from '../../services/movie/youtube';
  * and callbacks onPlay/onPause/onSeek(t) fired ONLY for local user actions.
  * Remote-applied changes are suppressed so sync events never echo.
  */
-const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, onSeek, onReady, onError }, ref) {
+const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, onSeek, onReady, onError, onBlocked }, ref) {
   const video = useRef(null);
   const yt = useRef(null);
   const ytHost = useRef(null);
@@ -21,7 +21,8 @@ const MoviePlayer = forwardRef(function MoviePlayer({ source, onPlay, onPause, o
   const local = () => Date.now() > suppress.current;
 
   useImperativeHandle(ref, () => ({
-    play: () => guard(() => (source.kind === 'youtube' ? yt.current?.playVideo() : video.current?.play().catch(() => {}))),
+    // Browsers can refuse to start playback that wasn't started by a tap (autoplay rules).
+    play: () => guard(() => (source.kind === 'youtube' ? yt.current?.playVideo() : video.current?.play().catch((e) => e?.name === 'NotAllowedError' && onBlocked?.()))),
     pause: () => guard(() => (source.kind === 'youtube' ? yt.current?.pauseVideo() : video.current?.pause())),
     seek: (t) => guard(() => (source.kind === 'youtube' ? yt.current?.seekTo(t, true) : video.current && (video.current.currentTime = t))),
     time: () => (source.kind === 'youtube' ? yt.current?.getCurrentTime?.() ?? 0 : video.current?.currentTime ?? 0),

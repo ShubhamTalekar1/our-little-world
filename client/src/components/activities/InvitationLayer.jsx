@@ -8,12 +8,13 @@ import { useAvatarStore } from '../../stores/avatarStore';
 import { usePeopleStore } from '../../stores/peopleStore';
 import { usePartnerWords } from '../../lib/words';
 import { playSfx } from '../../services/audio/sfx';
+import { FRIENDS } from '../../config/features';
 
 export const ACTIVITY_META = {
   movie: { emoji: '🎬', path: '/together/movie', ask: (w) => `${w.Subject} ${w.v('wants', 'want')} to watch a movie with you`, waiting: (w) => `Waiting for ${w.them} to grab popcorn…` },
   dance: { emoji: '💃', path: '/together/dance', ask: (w, me) => `${w.Subject} ${w.v('wants', 'want')} to slow dance with you`, waiting: (w) => `Asking ${w.them} to dance…` },
   date: { emoji: '🌃', path: '/date-night', ask: (w) => `${w.Subject} planned a date for you`, waiting: (w) => `Sending ${w.them} your date plan…` },
-  call: { emoji: '❤️', path: '/together/call', ask: (w) => `${w.Subject} ${w.v('wants', 'want')} you to come sit with ${w.them}`, waiting: (w) => `Waiting for ${w.them} to join…` },
+  call: { emoji: FRIENDS ? '📹' : '❤️', path: '/together/call', ask: (w) => `${w.Subject} ${w.v('wants', 'want')} you to come sit with ${w.them}`, waiting: (w) => `Waiting for ${w.them} to join…` },
   music: { emoji: '🎶', path: '/together/music', ask: (w) => `${w.Subject} ${w.v('wants', 'want')} to listen to music together`, waiting: (w) => `Waiting for ${w.them}…` },
 };
 
@@ -50,7 +51,7 @@ export default function InvitationLayer() {
             {incoming.meta?.title && <p className="mt-1 text-sm text-muted">{incoming.meta.title}</p>}
             <div className="mt-6 flex gap-2">
               <Button variant="primary" onClick={() => answer(true)} data-autofocus>
-                Accept ❤️
+                {FRIENDS ? 'I’m in 🍿' : 'Accept ❤️'}
               </Button>
               <Button variant="ghost" onClick={() => answer(false)}>
                 Not right now

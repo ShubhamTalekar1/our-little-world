@@ -40,13 +40,88 @@ VITE_DEMO_MODE=false
 npm run dev                           # Vite proxies /api and /socket.io to :4000
 ```
 
-The first person signs up at `/welcome` and gets a single-use invite code (`LOVE-7K4P`) and a private link. The second person uses `/join` with it. A world holds exactly two people.
+The first person signs up at `/welcome` and gets a single-use invite code (`HI-7K4P`, or `LOVE-7K4P` with `RELATIONSHIP=couple`) and a private link. The second person uses `/join` with it. A world holds exactly two people.
 
 Run the API tests (they need a disposable database in `DATABASE_URL`):
 
 ```bash
 npm test
 ```
+
+---
+
+## Deploying it for real
+
+The production setup is **one container**: the Node server serves the API, the realtime socket and the built web app from the same origin, so cookies and websockets just work. You also need PostgreSQL (Redis is optional).
+
+### What's open right now
+
+Only **chat** and **movie night** are open; everything else shows as "coming later" with a lock, and anything romantic (slow dance, date night, letters, gifts, kisses, "our story") is hidden entirely. The server enforces the same locks (locked APIs return 403).
+
+| Setting | Web app (build time) | Server (run time) | Default |
+| --- | --- | --- | --- |
+| What's open | `VITE_FEATURES` | `ENABLED_FEATURES` | `chat,movie` |
+| Friends or couple | `VITE_RELATIONSHIP` | `RELATIONSHIP` | `friends` |
+
+Feature names: `chat, movie, call, music, gifts, memories, dates, letters, avatar, wardrobe, world, dance, date, story`, or `all`. Keep both sides in sync. With `friends`, the romantic ones stay hidden even if listed.
+
+### Option A — Docker on any small server (VPS)
+
+```bash
+cp .env.prod.example .env.prod      # set JWT_SECRET and POSTGRES_PASSWORD
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+That starts the app on port 4000 with Postgres, Redis and a volume for uploaded photos. Database migrations run automatically on start. Put HTTPS in front, for example with [Caddy](https://caddyserver.com):
+
+```
+ourworld.example.com {
+  reverse_proxy localhost:4000
+}
+```
+
+### Option B — a platform (Render, Railway, Fly.io, …)
+
+1. Create a PostgreSQL database and copy its connection string.
+2. Create a web service from this repo using the root `Dockerfile`.
+3. Set the environment variables below. Attach a persistent disk at `/data/uploads` if you want chat photos to survive redeploys.
+4. The health check is `GET /api/health`.
+
+### Environment variables
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | ✅ | `postgresql://user:pass@host:5432/db` |
+| `JWT_SECRET` | ✅ | At least 32 random characters. The server refuses to start in production without it. `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `COOKIE_SECURE` | | `true` by default in production (needs HTTPS). Set `false` only to try it over plain http. |
+| `ENABLED_FEATURES`, `RELATIONSHIP` | | See above |
+| `UPLOAD_DIR` | | `/data/uploads` in the container; mount a volume there |
+| `REDIS_URL` | | Presence is kept in memory without it (fine for one instance) |
+| `STUN_URLS`, `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` | | Only needed once video is open; add TURN for strict networks |
+| `PORT` | | Default `4000` |
+
+To build the web app with different switches: `docker build --build-arg VITE_FEATURES=chat,movie,music .`
+
+### Without Docker
+
+```bash
+npm run build:prod        # builds the web app into server/public, installs the server
+NODE_ENV=production DATABASE_URL=... JWT_SECRET=... npm start
+```
+
+### Inviting her
+
+1. Open your site, tap **Come in** and create your account.
+2. You'll get a code like `HI-7K4P` and a link like `https://your-site/join?code=HI-7K4P`. Send her the link (**Settings → Your world** shows it again).
+3. She opens it, picks her name and look, and creates her account. Your screen updates the moment she's in. The code only works once, and a world holds exactly two people.
+
+### Movie night tips
+
+- **YouTube links** are the easiest way to watch something together: paste the link, and both of you get the same video with play, pause and seeking in sync.
+- **Any direct `https://…mp4` link** works too.
+- **A file on your device:** you each pick your own copy of the same file. Nothing is uploaded; when you pick a file, she gets a prompt to pick hers.
+- Whoever arrives second catches up automatically to the same film and moment. If her browser blocks autoplay, she gets a "tap to join" button.
+- Chat sits next to the film on a laptop and under it on a phone.
 
 ---
 
@@ -106,7 +181,7 @@ Semantic landmarks and headings, skip link, labelled controls, focus-visible sty
 | Partner (demo) | `DemoPartner` | Already swaps to Socket.IO with `VITE_DEMO_MODE=false` |
 | Video call | Real WebRTC for your own camera/mic/screen; in demo the other person is a live avatar | `services/rtc/peer.js` (signaling over the realtime hub). Add TURN servers via `VITE_ICE_SERVERS` for strict NATs |
 | Music | Generative arrangements via Web Audio (no copyrighted audio) | `services/audio/synth.js` exposes `play/stop` — replace with a provider SDK |
-| Movies | Openly licensed Blender films, local files, or YouTube links; play/pause/seek synced | `components/activities/MoviePlayer.jsx` player adapters |
+| Movies | Openly licensed Blender films, YouTube or direct video links, or each person's own local copy; play/pause/seek synced, late joiners catch up | `components/activities/MoviePlayer.jsx` player adapters |
 | GIFs | Local animated sticker set | `services/media/gifs.js` (`search(query)`) — add Giphy/Tenor with a server-side key |
 | Photos (demo) | Resized in-browser and kept locally | `services/media/upload.js` → `POST /api/media` |
 

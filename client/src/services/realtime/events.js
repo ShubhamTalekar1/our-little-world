@@ -18,6 +18,7 @@ export const EV = {
   MOVIE_PLAY: 'movie:play',
   MOVIE_PAUSE: 'movie:pause',
   MOVIE_SEEK: 'movie:seek',
+  MOVIE_STATE: 'movie:state',
   MOVIE_REACTION: 'movie:reaction',
   CALL_REACTION: 'call:reaction',
 

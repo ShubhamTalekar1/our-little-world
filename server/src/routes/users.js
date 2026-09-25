@@ -3,6 +3,7 @@ import { prisma } from '../db.js';
 import { ah } from '../lib/errors.js';
 import { validate, text, clientId, isoDate, z } from '../lib/validate.js';
 import { partnerOf } from '../middleware/auth.js';
+import { requireFeature } from '../middleware/features.js';
 import { notify } from '../services/notify.js';
 import { emitToUser } from '../realtime/hub.js';
 import * as S from '../services/serialize.js';
@@ -44,6 +45,7 @@ function dayIn(tz) {
 
 router.post(
   '/checkins',
+  requireFeature('dates'),
   validate(z.object({ id: clientId, mood: z.enum(MOODS), note: text(200).optional() })),
   ah(async (req, res) => {
     const day = dayIn(req.user.timezone);

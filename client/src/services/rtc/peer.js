@@ -1,6 +1,19 @@
-import { ICE_SERVERS } from '../../config/env';
+import { DEMO_MODE, ICE_SERVERS } from '../../config/env';
+import { api } from '../api/client';
 import { realtime } from '../realtime';
 import { EV } from '../realtime/events';
+
+// STUN/TURN come from the server (so TURN credentials can change without a rebuild).
+let iceServers = ICE_SERVERS;
+export async function loadIceServers() {
+  if (DEMO_MODE) return;
+  try {
+    const res = await api.get('/rtc/ice-servers');
+    if (res?.iceServers?.length) iceServers = res.iceServers;
+  } catch {
+    /* keep the build-time defaults */
+  }
+}
 
 /**
  * A thin RTCPeerConnection wrapper. Signaling travels over the realtime hub
@@ -9,7 +22,7 @@ import { EV } from '../realtime/events';
  */
 export class Peer {
   constructor({ onRemoteStream, onState }) {
-    this.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    this.pc = new RTCPeerConnection({ iceServers });
     this.remote = new MediaStream();
     this.pc.ontrack = (e) => {
       e.streams[0]?.getTracks().forEach((t) => this.remote.addTrack(t));

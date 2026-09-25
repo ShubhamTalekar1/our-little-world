@@ -8,9 +8,10 @@ import { cn } from '../../lib/cn';
 export default function BottomNav() {
   const setMore = useUiStore((s) => s.setMobileMoreOpen);
   const items = MOBILE_PRIMARY.map((to) => NAV.find((n) => n.to === to));
+  const cols = items.length + 1;
   return (
     <nav aria-label="Main" className="glass safe-bottom fixed inset-x-3 bottom-3 z-40 rounded-3xl lg:hidden">
-      <ul className="grid grid-cols-5">
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {items.map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
             <NavLink to={to} end={end} className={({ isActive }) => cn('relative flex flex-col items-center gap-1 py-2.5 text-[10.5px] transition', isActive ? 'text-cream' : 'text-muted')}>

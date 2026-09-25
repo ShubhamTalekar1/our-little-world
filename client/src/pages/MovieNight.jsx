@@ -19,6 +19,7 @@ import { usePresenceStore } from '../stores/presenceStore';
 import { toast } from '../stores/uiStore';
 import { usePartnerWords } from '../lib/words';
 import { cn } from '../lib/cn';
+import { FRIENDS, isEnabled } from '../config/features';
 
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
@@ -48,15 +49,20 @@ function SourcePicker({ open, onClose, onPick }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const id = parseYouTubeId(url.trim());
-            if (!id) return toast('That doesn’t look like a YouTube link', { emoji: '🔗', tone: 'error' });
-            onPick({ kind: 'youtube', videoId: id, title: 'YouTube video' });
+            const link = url.trim();
+            const id = parseYouTubeId(link);
+            if (id) return onPick({ kind: 'youtube', videoId: id, title: 'YouTube video' });
+            if (/^https:\/\/\S+$/i.test(link)) {
+              const name = decodeURIComponent(new URL(link).pathname.split('/').pop() || 'Video');
+              return onPick({ kind: 'html5', id: `url:${link}`, src: link, title: name });
+            }
+            toast('Paste a YouTube link or a direct https video link', { emoji: '🔗', tone: 'error' });
           }}
           className="flex gap-2"
         >
-          <label htmlFor="yt-url" className="sr-only">YouTube link</label>
-          <input id="yt-url" className="field" placeholder="Paste a YouTube link" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <Button type="submit" icon={Link2} aria-label="Load YouTube link" />
+          <label htmlFor="yt-url" className="sr-only">YouTube or video link</label>
+          <input id="yt-url" className="field" placeholder="Paste a YouTube or video link" value={url} onChange={(e) => setUrl(e.target.value)} />
+          <Button type="submit" icon={Link2} aria-label="Load link" />
         </form>
         <Button icon={FolderOpen} onClick={() => fileRef.current?.click()}>
           Use a file on this device
@@ -72,7 +78,7 @@ function SourcePicker({ open, onClose, onPick }) {
           }}
         />
       </div>
-      <p className="mt-3 text-xs text-muted">Local files stay on your device — {w.they}’ll need the same file on {w.their} side to watch in sync.</p>
+      <p className="mt-3 text-xs text-muted">Files stay on your device — nothing is uploaded. {w.Subject} will be asked to pick {w.their} copy of the same film, then play and pause stay in sync.</p>
     </Modal>
   );
 }
@@ -95,6 +101,53 @@ export default function MovieNight() {
   const w = usePartnerWords();
   const navigate = useNavigate();
   const together = partnerStatus !== 'offline' && partnerActivity?.type === 'movie';
+  const [blocked, setBlocked] = useState(false);
+  const [theirFile, setTheirFile] = useState(null); // they're playing a file from their device
+  const myFile = useRef(null);
+  const picked = useRef(false); // did I choose this film myself?
+  const pending = useRef(null); // playback to apply once a newly loaded film is ready
+
+  // Whoever arrives second catches up with the film and position of the one already watching.
+  useEffect(() => {
+    if (!together) return;
+    const p = player.current;
+    realtime.emit(EV.MOVIE_STATE, {
+      source: source.local ? { ...source, src: null } : source,
+      position: p?.time() ?? 0,
+      playing: p ? !p.paused() : false,
+      picked: picked.current,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [together]);
+  useEffect(
+    () =>
+      realtime.on(EV.MOVIE_STATE, ({ source: s, position = 0, playing, picked: theyPicked }) => {
+        if (!s || !(playing || (theyPicked && !picked.current))) return;
+        if (s.local) {
+          setTheirFile(s.title);
+          return;
+        }
+        const same = (s.id ?? s.videoId) === (source.id ?? source.videoId);
+        if (same) {
+          player.current?.seek(position);
+          if (playing) player.current?.play();
+        } else {
+          pending.current = { position, playing };
+          setSource(s);
+        }
+        setSync({ state: 'synced', at: position });
+        toast(playing ? `Catching up with ${w.them} at ${fmt(position)}` : `${w.Subject} picked ${s.title}`, { emoji: '🎬' });
+      }),
+    [source, w.them, w.Subject],
+  );
+  const onReady = () => {
+    setLoadError(null);
+    const p = pending.current;
+    if (!p) return;
+    pending.current = null;
+    player.current?.seek(p.position);
+    if (p.playing) player.current?.play();
+  };
 
   // Apply the other person's playback actions.
   useEffect(() => {
@@ -116,16 +169,21 @@ export default function MovieNight() {
         setSync({ state: 'synced', at: position });
       }),
       realtime.on(EV.MOVIE_LOAD, ({ source: s }) => {
-        if (s && !s.local) {
-          setSource(s);
-          toast(`${w.Subject} picked ${s.title}`, { emoji: '🎬' });
+        if (!s) return;
+        if (s.local) {
+          setTheirFile(s.title);
+          return;
         }
+        setTheirFile(null);
+        setSource(s);
+        toast(`${w.Subject} picked ${s.title}`, { emoji: '🎬' });
       }),
     ];
     return () => offs.forEach((o) => o());
   }, [w.Subject]);
 
   const pick = (s) => {
+    picked.current = true;
     setLoadError(null);
     setSource(s);
     setPicking(false);
@@ -134,6 +192,7 @@ export default function MovieNight() {
   };
 
   const onPlay = (t) => {
+    setBlocked(false);
     realtime.emit(EV.MOVIE_PLAY, { position: t });
     setSync({ state: 'synced', at: t });
     if (!counted.current) {
@@ -166,7 +225,7 @@ export default function MovieNight() {
           <Button size="sm" icon={Film} onClick={() => setPicking(true)}>
             Change film
           </Button>
-          {call.status === 'idle' && (
+          {isEnabled('call') && call.status === 'idle' && (
             <Button size="sm" icon={Video} onClick={() => call.join()}>
               Add video bubbles
             </Button>
@@ -195,7 +254,48 @@ export default function MovieNight() {
           {/* the theatre: a soft screen-glow around the player */}
           <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[radial-gradient(ellipse_at_center,rgba(143,179,217,0.18),transparent_70%)] blur-2xl" aria-hidden />
           <div className="relative aspect-video overflow-hidden rounded-3xl bg-black shadow-soft ring-1 ring-line">
-            <MoviePlayer key={source.id ?? source.videoId} ref={player} source={source} onPlay={onPlay} onPause={(t) => realtime.emit(EV.MOVIE_PAUSE, { position: t })} onSeek={(t) => realtime.emit(EV.MOVIE_SEEK, { position: t })} onError={(m) => setLoadError(m)} onReady={() => setLoadError(null)} />
+            <MoviePlayer key={source.id ?? source.videoId} ref={player} source={source} onPlay={onPlay} onPause={(t) => realtime.emit(EV.MOVIE_PAUSE, { position: t })} onSeek={(t) => realtime.emit(EV.MOVIE_SEEK, { position: t })} onError={(m) => setLoadError(m)} onReady={onReady} onBlocked={() => setBlocked(true)} />
+            {theirFile && (
+              <div className="absolute inset-x-3 top-3 z-20 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-ink/90 p-3 text-sm ring-1 ring-line">
+                <span className="text-cream">
+                  {w.Subject} is playing <span className="text-peach">{theirFile}</span> from {w.their} device.
+                </span>
+                <span className="flex gap-2">
+                  <Button size="sm" variant="primary" icon={FolderOpen} onClick={() => myFile.current?.click()}>
+                    Pick my copy
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setTheirFile(null)}>
+                    Not now
+                  </Button>
+                </span>
+                <input
+                  ref={myFile}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    // Answering their pick: load quietly, sync continues with play/pause.
+                    setSource({ kind: 'html5', id: `local:${f.name}`, src: URL.createObjectURL(f), title: f.name, local: true });
+                    setTheirFile(null);
+                    setLoadError(null);
+                  }}
+                />
+              </div>
+            )}
+            {blocked && (
+              <button
+                type="button"
+                className="absolute inset-0 z-10 grid place-items-center bg-ink/60 text-center"
+                onClick={() => {
+                  setBlocked(false);
+                  player.current?.play();
+                }}
+              >
+                <span className="rounded-full bg-peach px-5 py-3 text-sm font-medium text-ink shadow-soft">▶ {w.Subject} pressed play — tap to join</span>
+              </button>
+            )}
             {loadError && (
               <div className="absolute inset-0 z-20 grid place-items-center bg-ink/80 p-6 text-center">
                 <div>
@@ -213,7 +313,7 @@ export default function MovieNight() {
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1" role="group" aria-label="React">
-              {['😂', '🥹', '😮', '❤️', '🍿', '😱'].map((e) => (
+              {['😂', '🥹', '😮', FRIENDS ? '👏' : '❤️', '🍿', '😱'].map((e) => (
                 <motion.button key={e} whileTap={{ scale: 0.8 }} onClick={() => reactions.send(e)} className="grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-lg ring-1 ring-line hover:bg-surface-3" aria-label={`React ${e}`}>
                   {e}
                 </motion.button>
@@ -229,6 +329,10 @@ export default function MovieNight() {
             </motion.aside>
           )}
         </AnimatePresence>
+      </div>
+      {/* On phones the side chat doesn't fit, so it sits under the film. */}
+      <div className="card mt-4 flex h-[340px] flex-col overflow-hidden lg:hidden" aria-label="Chat">
+        <ChatPanel compact className="flex-1" limit={60} />
       </div>
       <SourcePicker open={picking} onClose={() => setPicking(false)} onPick={pick} />
     </div>

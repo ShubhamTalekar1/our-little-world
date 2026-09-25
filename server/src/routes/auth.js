@@ -7,12 +7,15 @@ import { validate, text, z } from '../lib/validate.js';
 import { hashPassword, checkPassword, signToken, COOKIE, cookieOptions } from '../lib/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import * as S from '../services/serialize.js';
+import { config } from '../config.js';
+import { emitToUser } from '../realtime/hub.js';
 
 const router = Router();
 const limiter = rateLimit({ windowMs: 15 * 60_000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: 'Too many attempts — take a breath and try again soon' } });
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const inviteCode = () => `LOVE-${[...crypto.randomBytes(4)].map((b) => ALPHABET[b % ALPHABET.length]).join('')}`;
+// Friends get a neutral prefix; the code itself is the same either way.
+const inviteCode = () => `${config.relationship === 'friends' ? 'HI' : 'LOVE'}-${[...crypto.randomBytes(4)].map((b) => ALPHABET[b % ALPHABET.length]).join('')}`;
 
 const registerSchema = z.object({
   name: text(40).pipe(z.string().min(1)),
@@ -48,6 +51,8 @@ router.post(
       return { user, couple };
     });
 
+    // Let whoever is already inside know their person just arrived.
+    result.couple.users?.forEach((u) => emitToUser(u.id, 'partner:joined', { partner: S.person(result.user) }));
     const token = signToken(result.user);
     res.cookie(COOKIE, token, cookieOptions);
     res.status(201).json({ token, user: S.person(result.user, { includeEmail: true }), couple: S.couple(result.couple) });

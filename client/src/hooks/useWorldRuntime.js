@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DEMO_MODE } from '../config/env';
 import { realtime } from '../services/realtime';
+import { EV } from '../services/realtime/events';
+import { useSettingsStore } from '../stores/settingsStore';
 import { bindRealtime } from '../services/realtime/bindings';
 import { hydrateFromApi } from '../services/api/bootstrap';
 import { setRemoteErrorHandler } from '../services/api/client';
@@ -18,6 +20,7 @@ import { ACHIEVEMENTS } from '../catalog/achievements';
 import { useStoryStore } from '../stores/storyStore';
 import { ROUTE_ACTIVITY } from '../lib/presence';
 import { playSfx } from '../services/audio/sfx';
+import { loadIceServers } from '../services/rtc/peer';
 
 /** Everything that keeps the world alive while you're inside it. */
 export function useWorldRuntime() {
@@ -41,10 +44,23 @@ export function useWorldRuntime() {
           return;
         }
       }
-      if (!cancelled) realtime.connect({ token });
+      if (cancelled) return;
+      loadIceServers();
+      realtime.connect({ token });
     })();
+    // After a dropped connection (phone asleep, wifi blip), catch up on anything missed.
+    let connects = 0;
+    const offOk = realtime.on('connection:ok', () => {
+      connects += 1;
+      // Anything said before the socket was up (like "I'm at movie night") was dropped: say it again.
+      const { activity } = usePresenceStore.getState().me;
+      const share = useSettingsStore.getState().privacy.showActivity;
+      realtime.emit(EV.PRESENCE_UPDATE, { status: 'online', activity: share ? activity : null });
+      if (connects > 1 && !DEMO_MODE) hydrateFromApi().catch(() => {});
+    });
     return () => {
       cancelled = true;
+      offOk();
       unbind();
       realtime.disconnect();
     };

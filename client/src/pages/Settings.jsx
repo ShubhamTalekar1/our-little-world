@@ -13,6 +13,7 @@ import { clearPersistedStores } from '../stores/createStore';
 import { playSfx } from '../services/audio/sfx';
 import { DEMO_MODE } from '../config/env';
 import { cn } from '../lib/cn';
+import { FRIENDS, isEnabled } from '../config/features';
 
 function Section({ id, title, description, children }) {
   return (
@@ -32,7 +33,7 @@ const SECTIONS = [
   ['privacy', 'Privacy'],
   ['sound', 'Sound'],
   ['appearance', 'Appearance & motion'],
-  ['couple', 'Couple'],
+  ['couple', FRIENDS ? 'Your world' : 'Couple'],
 ];
 
 export default function Settings() {
@@ -76,7 +77,7 @@ export default function Settings() {
             <Button className="mt-4" onClick={() => navigate('/avatar')}>Edit avatar</Button>
           </Section>
 
-          <Section id="person" title="Your person" description="How the app refers to them — only you see this.">
+          <Section id="person" title={FRIENDS ? 'Your friend' : 'Your person'} description="How the app refers to them — only you see this.">
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label htmlFor="p-name" className="eyebrow mb-1.5 block">What you call them</label>
@@ -108,13 +109,13 @@ export default function Settings() {
           <Section id="notifications" title="Notifications" description="Gentle, never spammy.">
             <div className="divide-y divide-line">
               {[
-                ['gifts', 'Gifts', 'When something arrives for you'],
-                ['messages', 'Messages', 'New messages while you’re elsewhere'],
-                ['invitations', 'Invitations', 'Movie, dance and date invitations'],
+                ['gifts', 'Gifts', 'When something arrives for you', 'gifts'],
+                ['messages', 'Messages', 'New messages while you’re elsewhere', 'chat'],
+                ['invitations', 'Invitations', FRIENDS ? 'Movie night invitations' : 'Movie, dance and date invitations'],
                 ['presence', 'Arrivals', 'When they come online'],
-                ['reminders', 'Reminders', 'Before plans on your calendar'],
-                ['letters', 'Letters', 'When a letter unlocks'],
-              ].map(([k, label, d]) => (
+                ['reminders', 'Reminders', 'Before plans on your calendar', 'dates'],
+                ['letters', 'Letters', 'When a letter unlocks', 'letters'],
+              ].filter(([, , , f]) => !f || isEnabled(f)).map(([k, label, d]) => (
                 <Toggle key={k} label={label} description={d} checked={s.notifications[k]} onChange={(v) => s.setNotification(k, v)} />
               ))}
             </div>
@@ -151,12 +152,14 @@ export default function Settings() {
             <p className="mt-3 text-xs text-muted">The theme is always evening — warm and dim, easy on the eyes.</p>
           </Section>
 
-          <Section id="couple" title="Couple" description="Just the two of you, always.">
+          <Section id="couple" title={FRIENDS ? 'Your world' : 'Couple'} description={FRIENDS ? 'Private to the two of you.' : 'Just the two of you, always.'}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="since" className="eyebrow mb-1.5 block">Together since</label>
-                <input id="since" type="date" className="field" value={couple?.since?.slice(0, 10) ?? ''} onChange={(e) => e.target.value && updateCouple({ since: new Date(e.target.value).toISOString(), anniversary: new Date(e.target.value).toISOString() })} />
-              </div>
+              {!FRIENDS && (
+                <div>
+                  <label htmlFor="since" className="eyebrow mb-1.5 block">Together since</label>
+                  <input id="since" type="date" className="field" value={couple?.since?.slice(0, 10) ?? ''} onChange={(e) => e.target.value && updateCouple({ since: new Date(e.target.value).toISOString(), anniversary: new Date(e.target.value).toISOString() })} />
+                </div>
+              )}
               <div>
                 <p className="eyebrow mb-1.5">Private invite code</p>
                 <div className="flex gap-2">
@@ -170,7 +173,7 @@ export default function Settings() {
                     }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted">Already used — your world is full. ❤️</p>
+                <p className="mt-1 text-xs text-muted">{couple?.inviteUsed ? 'Already used — it’s just the two of you now.' : `Send them this code, or the link ${window.location.origin}/join?code=${couple?.inviteCode ?? ''}`}</p>
               </div>
             </div>
             {DEMO_MODE && (

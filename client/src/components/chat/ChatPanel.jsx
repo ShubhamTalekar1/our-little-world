@@ -18,8 +18,10 @@ import { usePartnerWords } from '../../lib/words';
 import { dayLabel } from '../../lib/time';
 import { playSfx } from '../../services/audio/sfx';
 import { cn } from '../../lib/cn';
+import { FRIENDS } from '../../config/features';
 
-const EMOJIS = ['❤️', '🥰', '😘', '🥹', '😂', '😊', '🤍', '✨', '🌙', '☀️', '🌧️', '☕', '🍿', '🎬', '💃', '🌷', '🌹', '🫶', '🙈', '😴', '🤗', '💌', '🎁', '🔥'];
+const ROMANTIC = ['🥰', '😘', '🌹', '💌', '🫶', '💃', '🤍'];
+const EMOJIS = ['😂', '😊', '🥹', '👍', '🙌', '✨', '🌙', '☀️', '🌧️', '☕', '🍿', '🎬', '🙈', '😴', '🤗', '🎁', '🔥', '👀', '🥰', '😘', '🌹', '💌', '🫶', '🤍'].filter((e) => !FRIENDS || !ROMANTIC.includes(e));
 
 function Composer({ compact }) {
   const [text, setText] = useState('');
@@ -44,7 +46,7 @@ function Composer({ compact }) {
   });
 
   useEffect(() => {
-    if (panel === 'sticker') gifProvider.search('').then(setStickers);
+    if (panel === 'sticker') gifProvider.search('').then((list) => setStickers(FRIENDS ? list.filter((st) => !['love', 'kiss', 'heart', 'miss'].includes(st.id)) : list));
   }, [panel]);
 
   const onType = (v) => {

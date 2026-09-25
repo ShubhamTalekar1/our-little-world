@@ -17,6 +17,8 @@ import { FURNITURE_BY_ID } from '../../catalog/furniture';
 import { usePartnerWords } from '../../lib/words';
 import { isSameDay } from '../../lib/time';
 import { cn } from '../../lib/cn';
+import { isEnabled } from '../../config/features';
+import { AVATAR_ME, AVATAR_HER } from '../../data/defaultAvatars';
 
 const World3D = lazy(() => import('../world3d/World3D'));
 
@@ -96,10 +98,10 @@ function Room3D({ environment: envOverride, mode = 'home', decorating = false, s
           <World3D
             environment={env}
             mode={mode}
-            me={{ config: avatars[myId], pose: myPose, expression: myExpr, x: myX }}
-            partner={{ config: avatars[partner?.id], pose: partnerHere ? partnerPose : 'idle', expression: partnerHere ? partnerExpr : 'happy', x: partnerX, visible: partnerHere }}
+            me={{ config: avatars[myId] ?? AVATAR_ME, pose: myPose, expression: myExpr, x: myX }}
+            partner={{ config: avatars[partner?.id] ?? AVATAR_HER, pose: partnerHere ? partnerPose : 'idle', expression: partnerHere ? partnerExpr : 'happy', x: partnerX, visible: partnerHere }}
             furniture={furniture}
-            pet={showPet && env === 'bedroom' ? pet : null}
+            pet={showPet && isEnabled('world') && env === 'bedroom' ? pet : null}
             decorating={decorating}
             selected={selected}
             onSelect={setSelected}

@@ -21,6 +21,10 @@ import { useActivityStore } from '../stores/activityStore';
 import { usePresenceStore } from '../stores/presenceStore';
 import { GIFTS_BY_ID } from '../catalog/gifts';
 import { usePartnerWords } from '../lib/words';
+import { FRIENDS, isEnabled } from '../config/features';
+import { NAV_LOCKED } from '../components/layout/nav';
+import { useChatStore } from '../stores/chatStore';
+import { Lock } from 'lucide-react';
 import { dayLabel, formatTime, partOfDay, timeAgo, formatDate } from '../lib/time';
 
 function Greeting() {
@@ -45,13 +49,14 @@ function Greeting() {
 }
 
 const TONIGHT = [
-  { to: '/together/movie', emoji: '🎬', label: 'Watch Together', invite: 'movie' },
-  { to: '/together/dance', emoji: '💃', label: 'Slow Dance', invite: 'dance' },
-  { to: '/gifts', emoji: '🎁', label: (w) => `Send ${w.them} something` },
-  { to: '/letters?write=1', emoji: '💌', label: 'Write a Letter' },
-  { to: '/memories', emoji: '📸', label: 'Look at Memories' },
-  { to: '/together/call', emoji: '❤️', label: 'Come sit with me', invite: 'call' },
-];
+  { to: '/together/movie', emoji: '🎬', label: 'Watch a movie together', invite: 'movie', feature: 'movie' },
+  { to: '/chat', emoji: '💬', label: (w) => `Talk to ${w.them}`, feature: 'chat' },
+  { to: '/together/dance', emoji: '💃', label: 'Slow Dance', invite: 'dance', feature: 'dance' },
+  { to: '/gifts', emoji: '🎁', label: (w) => `Send ${w.them} something`, feature: 'gifts' },
+  { to: '/letters?write=1', emoji: '💌', label: 'Write a Letter', feature: 'letters' },
+  { to: '/memories', emoji: '📸', label: 'Look at Memories', feature: 'memories' },
+  { to: '/together/call', emoji: '📹', label: FRIENDS ? 'Video call' : 'Come sit with me', invite: 'call', feature: 'call' },
+].filter((a) => isEnabled(a.feature));
 
 function TonightActions() {
   const w = usePartnerWords();
@@ -63,7 +68,7 @@ function TonightActions() {
       <h2 id="tonight" className="hand text-center text-3xl text-cream-dim">
         “What should we do tonight?”
       </h2>
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <div className={`mt-5 grid grid-cols-2 gap-2.5 ${TONIGHT.length > 2 ? 'sm:grid-cols-3' : ''}`}>
         {TONIGHT.map((a, i) => (
           <motion.button
             key={a.to}
@@ -199,37 +204,76 @@ function FirstSteps() {
   );
 }
 
+/** The last thing said — a nudge back into the conversation. */
+function LatestChat() {
+  const last = useChatStore((st) => st.messages.at(-1));
+  const w = usePartnerWords();
+  return (
+    <Link to="/chat" className="card block p-5 transition hover:border-line-strong">
+      <p className="eyebrow">Chat</p>
+      {last ? (
+        <>
+          <p className="mt-2 line-clamp-2 text-sm text-cream">{last.type === 'text' ? last.text : last.type === 'image' ? '📷 Photo' : last.type === 'voice' ? '🎙️ Voice note' : '✨ Sticker'}</p>
+          <p className="mt-1 text-xs text-muted">{timeAgo(last.at)}</p>
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-muted">Say hi to {w.them} 👋</p>
+      )}
+    </Link>
+  );
+}
+
+function ComingLater() {
+  if (!NAV_LOCKED.length) return null;
+  return (
+    <section className="card p-5" aria-labelledby="coming-later">
+      <h2 id="coming-later" className="eyebrow">Coming later</h2>
+      <ul className="mt-3 flex flex-wrap gap-1.5">
+        {NAV_LOCKED.map(({ to, label }) => (
+          <li key={to} className="chip text-faint">
+            <Lock className="h-3 w-3" aria-hidden /> {label}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Home() {
   const all = useCalendarStore((s) => s.countdowns);
   const countdowns = all.filter((c) => c.pinned);
+  const world = isEnabled('world');
+  const dates = isEnabled('dates');
   return (
     <div>
       <Greeting />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">
           <motion.div initial={{ opacity: 0, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: 'easeOut' }}>
-            <Room className="aspect-[4/5] rounded-4xl shadow-glow ring-1 ring-line sm:aspect-[16/10]">
+            <Room showPet={world} className="aspect-[4/5] rounded-4xl shadow-glow ring-1 ring-line sm:aspect-[16/10]">
               <div className="absolute inset-x-3 top-3 z-30 flex items-start justify-between gap-2 sm:inset-x-4 sm:top-4">
                 <EnvironmentPicker />
-                <Link to="/world?tab=decorate" className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-cream-dim hover:text-cream">
-                  <Paintbrush className="h-3.5 w-3.5" aria-hidden /> Decorate
-                </Link>
+                {world && (
+                  <Link to="/world?tab=decorate" className="glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-cream-dim hover:text-cream">
+                    <Paintbrush className="h-3.5 w-3.5" aria-hidden /> Decorate
+                  </Link>
+                )}
               </div>
             </Room>
           </motion.div>
           <InteractionBar className="-mt-6 relative z-30 px-2" />
           <TonightActions />
         </div>
-        <aside className="flex flex-col gap-4" aria-label="Our day">
-          <TonightsPlan />
-          <FirstSteps />
-          {countdowns.slice(0, 2).map((c) => (
-            <Countdown key={c.id} countdown={c} compact />
-          ))}
-          <DailyCheckin />
-          <LatestGift />
-          <PetCard />
-          <LastTimeTogether />
+        <aside className="flex flex-col gap-4" aria-label="Right now">
+          {isEnabled('chat') && <LatestChat />}
+          {dates && <TonightsPlan />}
+          {!FRIENDS && <FirstSteps />}
+          {dates && countdowns.slice(0, 2).map((c) => <Countdown key={c.id} countdown={c} compact />)}
+          {dates && <DailyCheckin />}
+          {isEnabled('gifts') && <LatestGift />}
+          {world && <PetCard />}
+          {isEnabled('story') && <LastTimeTogether />}
+          <ComingLater />
         </aside>
       </div>
     </div>

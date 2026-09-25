@@ -1,6 +1,9 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { INTERACTIONS } from '../../catalog/interactions';
+import { INTERACTIONS_ALLOWED } from '../../config/features';
+
+const AVAILABLE = INTERACTIONS.filter((i) => INTERACTIONS_ALLOWED.includes(i.id));
 import { useUiStore } from '../../stores/uiStore';
 import { useStoryStore } from '../../stores/storyStore';
 import { realtime } from '../../services/realtime';
@@ -28,7 +31,7 @@ export default function InteractionBar({ className, compact = false }) {
   };
   return (
     <div role="toolbar" aria-label="Little interactions" className={cn('no-scrollbar flex gap-1.5 overflow-x-auto px-1 py-1 sm:flex-wrap sm:justify-center sm:overflow-visible', className)}>
-      {INTERACTIONS.map((ix) => (
+      {AVAILABLE.map((ix) => (
         <motion.button
           key={ix.id}
           whileHover={{ y: -2 }}
