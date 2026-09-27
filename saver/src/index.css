@@ -118,12 +118,6 @@ body {
   animation: shimmer 1.4s linear infinite;
 }
 
-/* Leaflet in dark mode: dim the light tiles rather than fetching a second style. */
-@media (prefers-color-scheme: dark) {
-  .leaflet-tile-pane {
-    filter: brightness(0.72) contrast(1.1) saturate(0.7);
-  }
-}
 .leaflet-container {
   font-family: var(--font-sans);
   background: var(--sunk);

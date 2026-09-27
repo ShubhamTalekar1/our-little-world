@@ -6,6 +6,7 @@
 import { extractPage } from './extract.js';
 import { classify, autoTags } from './classify.js';
 import { isVideoUrl, placeFromMapUrl, videoEmbedUrl, videoThumbnail } from './links.js';
+import { isNative } from './native.js';
 
 export const PUBLIC_PROXIES = [
   'https://api.allorigins.win/raw?url={url}',
@@ -18,10 +19,18 @@ const withTimeout = (ms) => {
   return { signal: ctrl.signal, done: () => clearTimeout(t) };
 };
 
-async function getText(url, ms = 12000) {
+// Sites give full previews to regular browsers; used when fetching directly from the app.
+const BROWSER_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-GB,en;q=0.9',
+};
+
+async function getText(url, ms = 12000, headers) {
   const { signal, done } = withTimeout(ms);
   try {
-    const res = await fetch(url, { signal });
+    const res = await fetch(url, { signal, headers });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } finally {
@@ -41,6 +50,15 @@ export function proxyList(settings = {}) {
 
 export async function fetchHtml(url, settings) {
   let lastErr;
+  // The Android/iOS app fetches natively (CapacitorHttp), so CORS doesn't apply: no proxy needed.
+  if (isNative) {
+    try {
+      const html = await getText(url, 15000, BROWSER_HEADERS);
+      if (/<(html|head|meta|title)[\s>]/i.test(html)) return html;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
   for (const tpl of proxyList(settings)) {
     try {
       const html = await getText(tpl.replace('{url}', encodeURIComponent(url)));

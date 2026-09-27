@@ -9,6 +9,9 @@ import Item from './pages/Item.jsx';
 import MapPage from './pages/MapPage.jsx';
 import Done from './pages/Done.jsx';
 import Settings from './pages/Settings.jsx';
+import { closeTopSheet, interceptExternalLinks, listenForBack, listenForShares } from './lib/native.js';
+
+interceptExternalLinks();
 
 /**
  * Android's share sheet opens the app at ./?title=…&text=…&url=…
@@ -31,13 +34,18 @@ const pendingShare = { input: null };
 function useShareTarget(hydrated) {
   const add = useSaves((s) => s.add);
   const navigate = useNavigate();
+  const [queue, setQueue] = useState(() => (pendingShare.input ? [pendingShare.input] : []));
+  // In the Android app, shares come from the native side instead of the URL.
+  useEffect(() => listenForShares((input) => setQueue((q) => [...q, input])), []);
   useEffect(() => {
     // Wait for saved data to load so the new item isn't overwritten by rehydration.
-    if (!hydrated || !pendingShare.input) return;
-    const input = pendingShare.input;
+    if (!hydrated || !queue.length) return;
     pendingShare.input = null;
-    navigate(`/item/${add(input)}`);
-  }, [hydrated, add, navigate]);
+    let last;
+    for (const input of queue) last = add(input);
+    setQueue([]);
+    navigate(`/item/${last}`);
+  }, [hydrated, queue, add, navigate]);
 }
 
 const tabs = [
@@ -55,6 +63,7 @@ export default function App() {
     return useSaves.persist.onFinishHydration(() => setHydrated(true));
   }, []);
   useShareTarget(hydrated);
+  useEffect(() => listenForBack(closeTopSheet), []);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col">

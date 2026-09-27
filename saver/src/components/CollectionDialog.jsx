@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSaves } from '../stores/useSaves.js';
 import { btnGhost, btnPrimary, input } from './ui.jsx';
+import { useCloseOnBack } from '../lib/native.js';
 
 const EMOJIS = ['📁', '✈️', '🍝', '☕', '🎁', '🏡', '💡', '🎉', '🌿', '🧘', '🎨', '📸', '🛒', '❤️', '🌙', '⭐'];
 
@@ -10,6 +11,7 @@ export default function CollectionDialog({ collection, onClose }) {
   const addCollection = useSaves((s) => s.addCollection);
   const renameCollection = useSaves((s) => s.renameCollection);
   const navigate = useNavigate();
+  useCloseOnBack(onClose);
   const [name, setName] = useState(collection?.name || '');
   const [emoji, setEmoji] = useState(collection?.emoji || '📁');
 

@@ -2,15 +2,21 @@
   "name": "saver",
   "private": true,
   "version": "0.1.0",
-  "description": "A personal place to save links, recipes, places and ideas — and actually do them.",
+  "description": "A personal place to save links, recipes, places and ideas \u2014 and actually do them.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:app": "CAP_BUILD=1 vite build && cap sync",
+    "android": "npm run build:app && cap open android",
+    "ios": "npm run build:app && cap open ios"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.2",
     "idb-keyval": "^6.3.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.48.0",
@@ -21,6 +27,10 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "linkedom": "^0.18.13",

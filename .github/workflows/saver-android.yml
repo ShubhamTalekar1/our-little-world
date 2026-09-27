@@ -1,0 +1,58 @@
+name: Saver Android app
+
+on:
+  push:
+    paths:
+      - 'saver/**'
+      - '.github/workflows/saver-android.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: saver
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: saver/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:app
+
+      - name: Build APK
+        env:
+          SAVER_VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_B64: ${{ secrets.SAVER_KEYSTORE_BASE64 }}
+          SAVER_KEYSTORE_PASSWORD: ${{ secrets.SAVER_KEYSTORE_PASSWORD }}
+        run: |
+          cd android
+          chmod +x gradlew
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/saver.jks"
+            export SAVER_KEYSTORE_FILE="$RUNNER_TEMP/saver.jks"
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Saver.apk"
+          else
+            echo "::warning::No SAVER_KEYSTORE_BASE64 secret, so this APK uses a throwaway debug key. Later builds won't install over it without uninstalling (export a backup first). See saver/README.md."
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/Saver.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Saver-android-${{ github.run_number }}
+          path: Saver.apk
+          if-no-files-found: error

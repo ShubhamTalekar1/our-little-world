@@ -3,12 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// The Android/iOS app bundles its files, so it skips the service worker (CAP_BUILD=1).
+const app = process.env.CAP_BUILD === '1';
+
 export default defineConfig({
   // Relative paths so the built app works from any folder or sub-path (e.g. GitHub Pages).
   base: './',
   plugins: [
     react(),
     tailwindcss(),
+    !app &&
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
@@ -38,7 +42,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Map tiles you've already looked at stay available offline.
-            urlPattern: /^https:\/\/[abc]?\.?tile\.openstreetmap\.org\//,
+            urlPattern: /^https:\/\/[a-d]\.basemaps\.cartocdn\.com\//,
             handler: 'CacheFirst',
             options: { cacheName: 'map-tiles', expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 } },
           },

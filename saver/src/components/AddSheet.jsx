@@ -5,11 +5,13 @@ import { useSaves } from '../stores/useSaves.js';
 import { KINDS } from '../lib/classify.js';
 import { findUrl } from '../lib/links.js';
 import { btnGhost, btnPrimary, input } from './ui.jsx';
+import { useCloseOnBack } from '../lib/native.js';
 
 export default function AddSheet({ onClose, defaults = {} }) {
   const add = useSaves((s) => s.add);
   const collections = useSaves((s) => s.collections);
   const navigate = useNavigate();
+  useCloseOnBack(onClose);
   const [text, setText] = useState('');
   const [kind, setKind] = useState(defaults.kind || 'auto');
   const [colId, setColId] = useState(defaults.collectionId || '');

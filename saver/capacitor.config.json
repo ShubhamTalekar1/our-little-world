@@ -1,0 +1,15 @@
+{
+  "appId": "io.github.shubhamtalekar1.saver",
+  "appName": "Saver",
+  "webDir": "dist",
+  "backgroundColor": "#f7f3ec",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

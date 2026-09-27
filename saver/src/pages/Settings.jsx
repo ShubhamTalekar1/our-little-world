@@ -3,6 +3,7 @@ import { Download, Loader2, Upload } from 'lucide-react';
 import { useSaves } from '../stores/useSaves.js';
 import { fetchHtml } from '../lib/fetchPage.js';
 import { PageHeader, btnGhost, input } from '../components/ui.jsx';
+import { isNative } from '../lib/native.js';
 
 export default function Settings() {
   const settings = useSaves((s) => s.settings);
@@ -69,53 +70,57 @@ export default function Settings() {
           {msg && <p className="mt-2 text-[13px] text-ink-2">{msg}</p>}
         </Card>
 
-        <Card title="Link previews">
-          <p className="text-[14px] text-ink-2">
-            To read a page’s title, photo, recipe or address, Saver fetches it through a proxy. Free public proxies work
-            but can be slow or blocked. Your own free Cloudflare Worker is fast and private: see{' '}
-            <code className="rounded bg-sunk px-1 text-[12px]">saver/worker/README.md</code>.
-          </p>
-          <label className="mt-3 block text-[13px] font-medium">Your proxy URL</label>
-          <input
-            value={proxy}
-            onChange={(e) => setProxy(e.target.value)}
-            onBlur={saveProxy}
-            placeholder="https://saver-proxy.you.workers.dev/?url={url}"
-            className={`${input} mt-1 py-2.5 text-[14px]`}
-            inputMode="url"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-          <label className="mt-3 flex items-center gap-2 text-[14px]">
-            <input
-              type="checkbox"
-              checked={settings.usePublicProxies !== false}
-              onChange={(e) => setSettings({ usePublicProxies: e.target.checked })}
-              className="h-4 w-4 accent-[var(--accent)]"
-            />
-            Fall back to public proxies
-          </label>
-          <div className="mt-3 flex items-center gap-3">
-            <button onClick={runTest} className={btnGhost} disabled={test === 'busy'}>
-              {test === 'busy' && <Loader2 size={15} className="animate-spin" />} Test
-            </button>
-            {test === 'ok' && <span className="text-[13px] text-good">Working ✓</span>}
-            {test?.startsWith('fail') && <span className="text-[13px] text-accent">Not reachable ({test.slice(5)})</span>}
-          </div>
-        </Card>
+        {!isNative && (
+          <>
+            <Card title="Link previews">
+              <p className="text-[14px] text-ink-2">
+                To read a page’s title, photo, recipe or address, Saver fetches it through a proxy. Free public proxies work
+                but can be slow or blocked. Your own free Cloudflare Worker is fast and private: see{' '}
+                <code className="rounded bg-sunk px-1 text-[12px]">saver/worker/README.md</code>.
+              </p>
+              <label className="mt-3 block text-[13px] font-medium">Your proxy URL</label>
+              <input
+                value={proxy}
+                onChange={(e) => setProxy(e.target.value)}
+                onBlur={saveProxy}
+                placeholder="https://saver-proxy.you.workers.dev/?url={url}"
+                className={`${input} mt-1 py-2.5 text-[14px]`}
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+              <label className="mt-3 flex items-center gap-2 text-[14px]">
+                <input
+                  type="checkbox"
+                  checked={settings.usePublicProxies !== false}
+                  onChange={(e) => setSettings({ usePublicProxies: e.target.checked })}
+                  className="h-4 w-4 accent-[var(--accent)]"
+                />
+                Fall back to public proxies
+              </label>
+              <div className="mt-3 flex items-center gap-3">
+                <button onClick={runTest} className={btnGhost} disabled={test === 'busy'}>
+                  {test === 'busy' && <Loader2 size={15} className="animate-spin" />} Test
+                </button>
+                {test === 'ok' && <span className="text-[13px] text-good">Working ✓</span>}
+                {test?.startsWith('fail') && <span className="text-[13px] text-accent">Not reachable ({test.slice(5)})</span>}
+              </div>
+            </Card>
 
-        <Card title="Add to your home screen">
-          <ul className="list-disc space-y-1 pl-5 text-[14px] text-ink-2">
-            <li>
-              <b className="text-ink">Android (Chrome):</b> menu ⋮ → <i>Install app</i>. After that, Saver appears in the
-              share sheet of every app: share a link to it and it’s saved.
-            </li>
-            <li>
-              <b className="text-ink">iPhone (Safari):</b> Share → <i>Add to Home Screen</i>. iOS doesn’t let web apps
-              receive shares, so copy a link and use <i>Paste</i> in the + sheet.
-            </li>
-          </ul>
-        </Card>
+            <Card title="Add to your home screen">
+              <ul className="list-disc space-y-1 pl-5 text-[14px] text-ink-2">
+                <li>
+                  <b className="text-ink">Android (Chrome):</b> menu ⋮ → <i>Install app</i>. After that, Saver appears in the
+                  share sheet of every app: share a link to it and it’s saved.
+                </li>
+                <li>
+                  <b className="text-ink">iPhone (Safari):</b> Share → <i>Add to Home Screen</i>. iOS doesn’t let web apps
+                  receive shares, so copy a link and use <i>Paste</i> in the + sheet.
+                </li>
+              </ul>
+            </Card>
+          </>
+        )}
 
         <Card title="Start over">
           <button

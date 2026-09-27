@@ -1,8 +1,15 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import { kindInfo } from '../lib/classify.js';
+
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const useDarkMode = () =>
+  useSyncExternalStore(
+    (cb) => (darkQuery.addEventListener('change', cb), () => darkQuery.removeEventListener('change', cb)),
+    () => darkQuery.matches
+  );
 
 const iconCache = new Map();
 function pinIcon(kind, done) {
@@ -41,6 +48,7 @@ export default function PlaceMap({ items, className = '', interactive = true }) 
     () => items.filter((i) => i.place?.lat != null).map((i) => ({ ...i.place, item: i })),
     [items]
   );
+  const dark = useDarkMode();
   const center = points[0] ? [points[0].lat, points[0].lng] : [20, 0];
   return (
     <MapContainer
@@ -52,8 +60,11 @@ export default function PlaceMap({ items, className = '', interactive = true }) 
       attributionControl
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        key={dark ? 'dark' : 'light'}
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url={`https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'rastertiles/voyager'}/{z}/{x}/{y}{r}.png`}
+        subdomains="abcd"
+        maxZoom={19}
       />
       {points.map((p) => (
         <Marker key={p.item.id} position={[p.lat, p.lng]} icon={pinIcon(p.item.kind, p.item.status === 'done')}>

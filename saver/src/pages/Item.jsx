@@ -7,6 +7,7 @@ import { useSaves } from '../stores/useSaves.js';
 import { KINDS } from '../lib/classify.js';
 import { geocode } from '../lib/fetchPage.js';
 import PlaceMap from '../components/PlaceMap.jsx';
+import { isNative } from '../lib/native.js';
 import { Cover, Empty, Stars, btn, btnGhost, btnPrimary, input } from '../components/ui.jsx';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -77,6 +78,7 @@ export default function Item() {
               className={`w-full ${/tiktok/.test(item.embedUrl) ? 'aspect-[9/16] max-h-[70vh]' : 'aspect-video'}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
               allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
               loading="lazy"
             />
           </div>
@@ -123,8 +125,8 @@ export default function Item() {
           <p className="mt-2 flex items-start gap-2 rounded-xl bg-sunk px-3 py-2 text-[13px] text-ink-2">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span>
-              Couldn’t read this page, so fill in what you want to keep. Some sites block previews; setting up your own
-              proxy in Settings helps a lot.
+              Couldn’t read this page, so fill in what you want to keep.
+              {isNative ? ' Some sites (Instagram, for one) hide their content from apps.' : ' Some sites block previews; setting up your own proxy in Settings helps a lot.'}
             </span>
           </p>
         )}
