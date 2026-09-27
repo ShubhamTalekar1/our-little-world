@@ -9,6 +9,9 @@ client/   React + Vite + Tailwind + Zustand + Framer Motion  (deploy anywhere st
 server/   Node + Express + Socket.IO + Prisma/PostgreSQL + Redis  (deploy separately)
 ```
 
+`saver/` is a separate personal app (an Albo-style link saver) that shares nothing with this one; see [saver/README.md](saver/README.md).
+
+
 ---
 
 ## Quick start — demo mode (no setup)
