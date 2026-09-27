@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes its run number so each build installs over the previous one.
-        versionCode (System.getenv("SAVER_VERSION_CODE") ?: "1").toInteger()
-        versionName "1.0." + (System.getenv("SAVER_VERSION_CODE") ?: "0")
+        versionCode = (System.getenv("SAVER_VERSION_CODE") ?: "1").toInteger()
+        versionName = "1.0." + (System.getenv("SAVER_VERSION_CODE") ?: "0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -22,16 +22,16 @@ android {
     signingConfigs {
         release {
             if (keystore) {
-                storeFile file(keystore)
-                storePassword System.getenv("SAVER_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("SAVER_KEY_ALIAS") ?: "saver"
-                keyPassword System.getenv("SAVER_KEYSTORE_PASSWORD")
+                storeFile = file(keystore)
+                storePassword = System.getenv("SAVER_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SAVER_KEY_ALIAS") ?: "saver"
+                keyPassword = System.getenv("SAVER_KEYSTORE_PASSWORD")
             }
         }
     }
     buildTypes {
         release {
-            if (keystore) signingConfig signingConfigs.release
+            if (keystore) signingConfig = signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
